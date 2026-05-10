@@ -1,0 +1,710 @@
+'use client'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSignIn, useAuth, useClerk } from '@clerk/nextjs'
+
+type Group = { id: string; name: string; description: string; role: string; subdomain: string | null }
+
+/* ── Brand name component ───────────────────────────────────── */
+function BrandName({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const baseClass = size === 'lg' ? 'text-3xl' : size === 'md' ? 'text-2xl' : 'text-base'
+  return (
+    <span className={`font-semibold ${baseClass}`}>
+      My<span
+        className="font-black bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 bg-clip-text text-transparent"
+      >Schedule</span>
+    </span>
+  )
+}
+
+/* ── Left panel: marketing copy ─────────────────────────────── */
+function MarketingCopy() {
+  const items = [
+    { icon: '📅', title: 'Personal scheduling', body: 'Keep track of all your events, deadlines and reminders in one place.' },
+    { icon: '🔔', title: 'Smart pre-alerts', body: 'Get reminders 30, 7, or 1 day before important events automatically.' },
+    { icon: '⚖️', title: 'Court date tracking', body: 'Highlight urgent court hearings and filing deadlines within 14 days.' },
+    { icon: '👥', title: 'Team collaboration', body: 'Assign events to team members and track everything together.' },
+    { icon: '🔒', title: 'End-to-end encrypted', body: 'Your schedule data stays private with per-group encryption keys.' },
+  ]
+  return (
+    <div className="flex flex-col gap-8 select-none max-w-sm">
+      <div>
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-600 mb-4 shadow-lg shadow-teal-900/40">
+          <span className="text-white text-xl font-black">Q</span>
+        </div>
+        <h1 className="text-white text-3xl font-semibold mb-1"><BrandName size="lg" /></h1>
+        <p className="text-slate-400 text-sm">Your personal schedule, organised and encrypted</p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <span className="text-xl flex-shrink-0 mt-0.5">{item.icon}</span>
+            <div>
+              <div className="text-white font-medium text-sm">{item.title}</div>
+              <div className="text-slate-400 text-xs mt-0.5 leading-relaxed">{item.body}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 opacity-20">
+        <div className="flex-1 h-px bg-white" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+        <div className="flex-1 h-px bg-white" />
+      </div>
+    </div>
+  )
+}
+
+/* ── Main page ──────────────────────────────────────────────── */
+export default function LoginPage() {
+  const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { signIn } = useSignIn() as any
+  const { userId, isLoaded: authLoaded } = useAuth()
+  const { setActive, signOut } = useClerk()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getClerkSignUp = (): any => (window as any).Clerk?.client?.signUp
+  const [step, setStep]         = useState<'login' | 'group' | 'reset-email' | 'reset-code' | 'register' | 'register-verify' | 'register-choose' | 'register-create-group'>('login')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [error,    setError]    = useState('')
+
+  // ── Register state ───────────────────────────────────────
+  const [regName,        setRegName]        = useState('')
+  const [regEmail,       setRegEmail]       = useState('')
+  const [regPassword,    setRegPassword]    = useState('')
+  const [regAffiliation, setRegAffiliation] = useState('')
+  const [regCode,        setRegCode]        = useState('')
+  const [regLoading,     setRegLoading]     = useState(false)
+  const [regMsg,         setRegMsg]         = useState('')
+  const [showRegPwd,     setShowRegPwd]     = useState(false)
+  const [regClerkUserId, setRegClerkUserId] = useState('')
+
+  // ── Group creation state (post-register) ────────────────
+  const [regGroupNameCn,   setRegGroupNameCn]   = useState('')
+  const [regGroupNameEn,   setRegGroupNameEn]   = useState('')
+  const [regManagerNameEn, setRegManagerNameEn] = useState('')
+  const [regGroupSaving,   setRegGroupSaving]   = useState(false)
+  const [regGroupMsg,      setRegGroupMsg]      = useState('')
+
+  async function handleRegister() {
+    if (!regName.trim() || !regEmail.trim() || !regPassword) {
+      setRegMsg('❌ Please fill in your name, email and password'); return
+    }
+    if (regPassword.length < 8) { setRegMsg('❌ Password must be at least 8 characters'); return }
+    setRegLoading(true); setRegMsg('')
+    try {
+      const su = getClerkSignUp()
+      if (!su) { setRegMsg('❌ Auth service not ready — please refresh'); setRegLoading(false); return }
+      await su.create({
+        emailAddress: regEmail.trim().toLowerCase(),
+        password: regPassword,
+        firstName: regName.trim(),
+      })
+      const regStatus    = su.status
+      const regUserId    = su.createdUserId
+      const regSessionId = su.createdSessionId
+      if (regStatus === 'complete') {
+        await saveProfile(regUserId!)
+        await setActive!({ session: regSessionId })
+        setRegClerkUserId(regUserId!)
+        setStep('register-choose')
+      } else {
+        await su.prepareEmailAddressVerification({ strategy: 'email_code' })
+        setStep('register-verify')
+      }
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || JSON.stringify(err)
+      setRegMsg(`❌ ${msg.includes('already') ? 'This email is already registered' : msg}`)
+    } finally {
+      setRegLoading(false)
+    }
+  }
+
+  async function handleRegisterVerify() {
+    if (!regCode.trim()) { setRegMsg('❌ Please enter the code'); return }
+    setRegLoading(true); setRegMsg('')
+    try {
+      const su = getClerkSignUp()
+      if (!su) { setRegMsg('❌ Auth service not ready — please refresh'); setRegLoading(false); return }
+      await su.attemptEmailAddressVerification({ code: regCode.trim() })
+      const vStatus    = su.status
+      const vUserId    = su.createdUserId
+      const vSessionId = su.createdSessionId
+      if (vStatus === 'complete') {
+        const uid = vUserId ?? su.createdUserId ?? ''
+        const sid = vSessionId ?? su.createdSessionId
+        await saveProfile(uid)
+        await setActive!({ session: sid })
+        setRegClerkUserId(uid)
+        setStep('register-choose')
+      } else {
+        setRegMsg(`❌ Verification incomplete (status: ${vStatus}), please try again`)
+      }
+    } catch (err: any) {
+      setRegMsg(`❌ ${err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || JSON.stringify(err)}`)
+    } finally {
+      setRegLoading(false)
+    }
+  }
+
+  async function saveProfile(clerkUserId: string) {
+    await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clerkUserId,
+        name: regName.trim(),
+        email: regEmail.trim().toLowerCase(),
+        affiliation: regAffiliation.trim() || null,
+      }),
+    })
+  }
+
+  async function handleCreateGroup() {
+    if (!regGroupNameCn.trim() || !regGroupNameEn.trim() || !regManagerNameEn.trim()) {
+      setRegGroupMsg('❌ All fields are required'); return
+    }
+    const enCombined = regGroupNameEn.trim() + regManagerNameEn.trim()
+    if (!/[a-zA-Z0-9]/.test(enCombined)) {
+      setRegGroupMsg('❌ English name must contain letters or numbers'); return
+    }
+    setRegGroupSaving(true); setRegGroupMsg('')
+    try {
+      const res = await fetch('/api/auth/create-group-for-self', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkUserId: regClerkUserId,
+          groupNameCn: regGroupNameCn.trim(),
+          groupNameEn: regGroupNameEn.trim(),
+          managerNameEn: regManagerNameEn.trim(),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        const errMsg = json.error || 'Creation failed'
+        if (errMsg.includes('already') || errMsg.includes('taken')) {
+          setRegGroupMsg(`❌ Path "${json.subdomain || ''}" is taken — try a different English name`)
+        } else {
+          setRegGroupMsg(`❌ ${errMsg}`)
+        }
+        return
+      }
+      window.location.href = `/${json.subdomain}/schedule`
+    } catch {
+      setRegGroupMsg('❌ Network error — please try again')
+    } finally {
+      setRegGroupSaving(false)
+    }
+  }
+
+  // ── Password reset state ─────────────────────────────────
+  const [resetEmail,    setResetEmail]    = useState('')
+  const [resetCode,     setResetCode]     = useState('')
+  const [resetNewPwd,   setResetNewPwd]   = useState('')
+  const [resetLoading,  setResetLoading]  = useState(false)
+  const [resetMsg,      setResetMsg]      = useState('')
+  const [showNewPwd,    setShowNewPwd]    = useState(false)
+
+  async function handleSendResetCode() {
+    if (!resetEmail.trim()) { setResetMsg('Please enter your email'); return }
+    setResetLoading(true); setResetMsg('')
+    try {
+      await signIn!.create({ strategy: 'reset_password_email_code', identifier: resetEmail.trim().toLowerCase() })
+      setStep('reset-code')
+    } catch (err: any) {
+      setResetMsg(`❌ ${err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to send — please check your email'}`)
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
+  async function handleVerifyReset() {
+    if (!resetCode.trim() || !resetNewPwd) { setResetMsg('Please enter the code and new password'); return }
+    if (resetNewPwd.length < 8) { setResetMsg('Password must be at least 8 characters'); return }
+    setResetLoading(true); setResetMsg('')
+    try {
+      const result = await signIn!.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code: resetCode.trim(),
+        password: resetNewPwd,
+      } as any)
+      if (result.status === 'complete') {
+        await signOut().catch(() => {})
+        setEmail(resetEmail.trim().toLowerCase())
+        setPassword('')
+        setError('✅ Password reset. Sign in with your new password.')
+        setStep('login')
+        setResetCode(''); setResetNewPwd(''); setShowNewPwd(false)
+      } else {
+        setResetMsg('❌ Reset incomplete, please try again')
+      }
+    } catch (err: any) {
+      setResetMsg(`❌ ${err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Verification failed'}`)
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
+  // Already logged in — redirect away from login page
+  useEffect(() => {
+    if (!authLoaded || !userId) return
+    if (['register', 'register-verify', 'register-choose', 'register-create-group'].includes(step)) return
+    fetch('/api/auth/get-redirect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+      .then(r => r.json())
+      .then(({ url, uid: resolvedUid }) => {
+        const finalUid = resolvedUid || userId
+        if (finalUid) document.cookie = `qt_uid=${encodeURIComponent(finalUid)}; path=/; max-age=86400; SameSite=Lax`
+        window.location.href = url && url !== '/login'
+          ? `${url}?_uid=${encodeURIComponent(finalUid)}`
+          : '/login'
+      })
+      .catch(() => { window.location.href = '/' })
+  }, [authLoaded, userId, step])
+  const [loading,  setLoading]  = useState(false)
+  const [loadStep, setLoadStep] = useState('')
+  const [groups,   setGroups]   = useState<Group[]>([])
+
+  async function handleLogin() {
+    if (!email.trim() || !password) { setError('Please enter your email and password.'); return }
+    setLoading(true); setError('')
+
+    try {
+      setLoadStep('1/3 Verifying credentials…')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result: any = await signIn.create({
+        identifier: email.trim().toLowerCase(),
+        password,
+      })
+
+      const status    = result?.status    ?? signIn?.status
+      const sessionId = result?.createdSessionId ?? signIn?.createdSessionId
+
+      if (status !== 'complete') {
+        setError(`Sign-in incomplete (status: ${status}), please try again.`)
+        setLoading(false); setLoadStep(''); return
+      }
+
+      setLoadStep('2/3 Activating session…')
+      setActive!({ session: sessionId }).catch(() => {})
+
+      setLoadStep('3/3 Getting access…')
+      const res = await fetch('/api/auth/get-redirect', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      const { url, uid } = await res.json()
+      if (uid) document.cookie = `qt_uid=${encodeURIComponent(uid)}; path=/; max-age=86400; SameSite=Lax`
+      window.location.href = url && url !== '/login'
+        ? `${url}?_uid=${encodeURIComponent(uid)}`
+        : '/login'
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || String(err)
+      setError(`Sign-in failed: ${msg}`)
+      setLoading(false)
+    }
+  }
+
+  function doSelectGroup(group: Group) {
+    document.cookie = `qt_group=${group.id}; path=/; max-age=86400; SameSite=Lax`
+    router.push(group.subdomain ? `/${group.subdomain}/schedule` : '/')
+    router.refresh()
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) { if (e.key === 'Enter') handleLogin() }
+
+  /* ── Group picker ───────────────────────────────────────── */
+  if (step === 'group') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-bold">Q</span>
+            </div>
+            <h1 className="text-white text-2xl"><BrandName /></h1>
+            <p className="text-slate-400 text-sm mt-2">Select a workspace</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 space-y-3">
+            {groups.map(g => (
+              <button key={g.id} onClick={() => doSelectGroup(g)}
+                className="w-full text-left px-4 py-3 rounded-xl border-2 border-gray-200
+                           hover:border-teal-500 hover:bg-teal-50 transition-all duration-150 group">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-gray-900 group-hover:text-teal-700">{g.name}</div>
+                    {g.description && <div className="text-xs text-gray-500 mt-0.5">{g.description}</div>}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-3
+                    ${g.role === 'first_admin'  ? 'bg-purple-100 text-purple-700'
+                    : g.role === 'second_admin' ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600'}`}>
+                    {g.role === 'first_admin' ? 'Primary Admin' : g.role === 'second_admin' ? 'Secondary Admin' : 'Member'}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-slate-500 text-xs mt-6">You can switch workspaces from the header.</p>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Reset: enter email ────────────────────────────────── */
+  if (step === 'reset-email') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Reset password</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <p className="text-sm text-gray-600">Enter your email and we&apos;ll send you a reset code.</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendResetCode()}
+                placeholder="your@email.com" autoFocus
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            {resetMsg && <p className="text-sm text-red-600">{resetMsg}</p>}
+            <button onClick={handleSendResetCode} disabled={resetLoading}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition-colors">
+              {resetLoading ? 'Sending…' : 'Send reset code'}
+            </button>
+            <button onClick={() => { setStep('login'); setResetMsg('') }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-1 transition-colors">
+              ← Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Reset: enter code + new password ──────────────────── */
+  if (step === 'reset-code') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Enter the code and set a new password</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <p className="text-sm text-gray-500">Code sent to <span className="font-medium text-gray-800">{resetEmail}</span></p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+              <input type="text" value={resetCode} onChange={e => setResetCode(e.target.value)}
+                placeholder="6-digit code" autoFocus inputMode="numeric" maxLength={6}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 tracking-widest text-center" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
+              <div className="relative">
+                <input type={showNewPwd ? 'text' : 'password'} value={resetNewPwd}
+                  onChange={e => setResetNewPwd(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleVerifyReset()}
+                  placeholder="Min 8 characters" autoComplete="new-password"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 pr-14" />
+                <button type="button" onClick={() => setShowNewPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700">
+                  {showNewPwd ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+            {resetMsg && <p className="text-sm text-red-600">{resetMsg}</p>}
+            <button onClick={handleVerifyReset} disabled={resetLoading}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition-colors">
+              {resetLoading ? 'Verifying…' : 'Reset password'}
+            </button>
+            <button onClick={() => { setStep('reset-email'); setResetMsg('') }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-1 transition-colors">
+              ← Resend code
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Register: choose next step ───────────────────────── */
+  if (step === 'register-choose') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Account created! What would you like to do?</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <div>
+              <button
+                onClick={() => setStep('register-create-group')}
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2.5 rounded-lg transition-colors">
+                Create my workspace
+              </button>
+              <p className="text-xs text-gray-400 mt-1.5 text-center">Set up your personal schedule workspace</p>
+            </div>
+            <div>
+              <button
+                onClick={() => { window.location.href = '/pending' }}
+                className="w-full border border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-900 font-medium py-2.5 rounded-lg transition-colors">
+                Join an existing workspace
+              </button>
+              <p className="text-xs text-gray-400 mt-1.5 text-center">For members who&apos;ve been invited to join</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Register: create group ────────────────────────────── */
+  if (step === 'register-create-group') {
+    const previewSubdomain = (regGroupNameEn + regManagerNameEn).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Create a new workspace</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Workspace name <span className="text-red-500">*</span></label>
+              <input type="text" value={regGroupNameCn} onChange={e => setRegGroupNameCn(e.target.value)}
+                placeholder="e.g. My Law Firm" autoFocus
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Workspace name (English) <span className="text-red-500">*</span></label>
+              <input type="text" value={regGroupNameEn} onChange={e => setRegGroupNameEn(e.target.value)}
+                placeholder="e.g. MyLawFirm"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Your name in English <span className="text-red-500">*</span></label>
+              <input type="text" value={regManagerNameEn} onChange={e => setRegManagerNameEn(e.target.value)}
+                placeholder="e.g. JohnSmith"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            {previewSubdomain && (
+              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-4 py-2.5 border border-gray-200">
+                Workspace URL: <span className="font-mono font-semibold text-teal-700">qujingtuan.com/{previewSubdomain}</span>
+              </div>
+            )}
+            {regGroupMsg && <p className="text-sm text-red-600">{regGroupMsg}</p>}
+            <button onClick={handleCreateGroup} disabled={regGroupSaving}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition-colors">
+              {regGroupSaving ? 'Creating…' : 'Create workspace'}
+            </button>
+            <button onClick={() => { setStep('register-choose'); setRegGroupMsg('') }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-1 transition-colors">
+              ← Back
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Register form ─────────────────────────────────────── */
+  if (step === 'register') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Create account</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full name <span className="text-red-500">*</span></label>
+              <input type="text" value={regName} onChange={e => setRegName(e.target.value)}
+                placeholder="Your full name" autoFocus
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+              <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input type={showRegPwd ? 'text' : 'password'} value={regPassword}
+                  onChange={e => setRegPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleRegister()}
+                  placeholder="Min 8 characters" autoComplete="new-password"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 pr-14" />
+                <button type="button" onClick={() => setShowRegPwd(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700">
+                  {showRegPwd ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
+              <input type="text" value={regAffiliation} onChange={e => setRegAffiliation(e.target.value)}
+                placeholder="Firm / school (optional)"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400" />
+            </div>
+            {regMsg && <p className="text-sm text-red-600">{regMsg}</p>}
+            <button onClick={handleRegister} disabled={regLoading}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition-colors">
+              {regLoading ? 'Creating…' : 'Create account'}
+            </button>
+            <button onClick={() => { setStep('login'); setRegMsg('') }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-1 transition-colors">
+              ← Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Register: email verification ──────────────────────── */
+  if (step === 'register-verify') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Verify email</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
+            <p className="text-sm text-gray-500">Code sent to <span className="font-medium text-gray-800">{regEmail}</span></p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+              <input type="text" value={regCode} onChange={e => setRegCode(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleRegisterVerify()}
+                placeholder="6-digit code" autoFocus inputMode="numeric" maxLength={6}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 tracking-widest text-center" />
+            </div>
+            {regMsg && <p className="text-sm text-red-600">{regMsg}</p>}
+            <button onClick={handleRegisterVerify} disabled={regLoading}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition-colors">
+              {regLoading ? 'Verifying…' : 'Verify & finish'}
+            </button>
+            <button onClick={() => { setStep('register'); setRegMsg(''); setRegCode('') }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700 py-1 transition-colors">
+              ← Back
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Login form ─────────────────────────────────────────── */
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
+      <div className="w-full max-w-5xl flex items-center justify-center gap-0 lg:gap-16 xl:gap-24">
+
+        {/* Left: marketing copy */}
+        <div className="hidden lg:flex flex-1 items-center justify-center">
+          <MarketingCopy />
+        </div>
+
+        {/* Right: login card */}
+        <div className="w-full max-w-sm flex-shrink-0">
+          {/* Mobile-only brand header */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4 shadow-lg shadow-teal-900/50">
+              <span className="text-white text-2xl font-black">Q</span>
+            </div>
+            <h1 className="text-white mb-1"><BrandName size="lg" /></h1>
+            <p className="text-slate-400 text-sm">Sign in with your email</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="mb-6 hidden lg:block">
+              <h2 className="text-gray-900 text-xl font-semibold">Sign in</h2>
+              <p className="text-gray-500 text-sm mt-0.5">Welcome back — enter your details below</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
+                  placeholder="your@email.com" autoFocus autoComplete="email"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
+                             placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password" value={password}
+                  onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
+                  placeholder="Enter password" autoComplete="current-password"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                             focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
+                             placeholder:text-gray-400"
+                />
+              </div>
+              {error && (
+                <div className={`rounded-lg px-4 py-2.5 border ${error.startsWith('✅')
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'}`}>
+                  <p className={`text-sm ${error.startsWith('✅') ? 'text-green-700' : 'text-red-700'}`}>{error}</p>
+                </div>
+              )}
+              <button onClick={handleLogin} disabled={loading}
+                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400
+                           text-white font-medium py-2.5 rounded-lg transition-colors duration-150
+                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">
+                {loading ? (loadStep || 'Signing in…') : 'Sign in'}
+              </button>
+              <div className="flex items-center justify-between text-xs">
+                <button type="button" onClick={() => { setStep('reset-email'); setResetEmail(email); setResetMsg('') }}
+                  className="text-gray-400 hover:text-teal-600 transition-colors">
+                  Forgot password?
+                </button>
+                <button type="button" onClick={() => { setStep('register'); setRegMsg('') }}
+                  className="text-teal-600 hover:text-teal-800 font-medium transition-colors">
+                  Create account →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-slate-500 text-xs mt-6">Register and ask your workspace admin to add you.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
