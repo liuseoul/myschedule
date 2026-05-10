@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSignIn, useAuth, useClerk } from '@clerk/nextjs'
+import { useSignIn, useSignUp, useAuth, useClerk } from '@clerk/nextjs'
 
 type Group = { id: string; name: string; description: string; role: string; subdomain: string | null }
 
@@ -62,10 +62,10 @@ export default function LoginPage() {
   const router = useRouter()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { signIn } = useSignIn() as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { signUp } = useSignUp() as any
   const { userId, isLoaded: authLoaded } = useAuth()
   const { setActive, signOut } = useClerk()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getClerkSignUp = (): any => (window as any).Clerk?.client?.signUp
   const [step, setStep]         = useState<'login' | 'group' | 'reset-email' | 'reset-code' | 'register' | 'register-verify' | 'register-choose' | 'register-create-group'>('login')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -94,25 +94,21 @@ export default function LoginPage() {
       setRegMsg('❌ Please fill in your name, email and password'); return
     }
     if (regPassword.length < 8) { setRegMsg('❌ Password must be at least 8 characters'); return }
+    if (!signUp) { setRegMsg('❌ Auth service not ready — please refresh'); return }
     setRegLoading(true); setRegMsg('')
     try {
-      const su = getClerkSignUp()
-      if (!su) { setRegMsg('❌ Auth service not ready — please refresh'); setRegLoading(false); return }
-      await su.create({
+      const result = await signUp.create({
         emailAddress: regEmail.trim().toLowerCase(),
         password: regPassword,
         firstName: regName.trim(),
       })
-      const regStatus    = su.status
-      const regUserId    = su.createdUserId
-      const regSessionId = su.createdSessionId
-      if (regStatus === 'complete') {
-        await saveProfile(regUserId!)
-        await setActive!({ session: regSessionId })
-        setRegClerkUserId(regUserId!)
+      if (result.status === 'complete') {
+        await saveProfile(result.createdUserId!)
+        await setActive!({ session: result.createdSessionId })
+        setRegClerkUserId(result.createdUserId!)
         setStep('register-choose')
       } else {
-        await su.prepareEmailAddressVerification({ strategy: 'email_code' })
+        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
         setStep('register-verify')
       }
     } catch (err: any) {
@@ -125,23 +121,17 @@ export default function LoginPage() {
 
   async function handleRegisterVerify() {
     if (!regCode.trim()) { setRegMsg('❌ Please enter the code'); return }
+    if (!signUp) { setRegMsg('❌ Auth service not ready — please refresh'); return }
     setRegLoading(true); setRegMsg('')
     try {
-      const su = getClerkSignUp()
-      if (!su) { setRegMsg('❌ Auth service not ready — please refresh'); setRegLoading(false); return }
-      await su.attemptEmailAddressVerification({ code: regCode.trim() })
-      const vStatus    = su.status
-      const vUserId    = su.createdUserId
-      const vSessionId = su.createdSessionId
-      if (vStatus === 'complete') {
-        const uid = vUserId ?? su.createdUserId ?? ''
-        const sid = vSessionId ?? su.createdSessionId
-        await saveProfile(uid)
-        await setActive!({ session: sid })
-        setRegClerkUserId(uid)
+      const result = await signUp.attemptEmailAddressVerification({ code: regCode.trim() })
+      if (result.status === 'complete') {
+        await saveProfile(result.createdUserId!)
+        await setActive!({ session: result.createdSessionId })
+        setRegClerkUserId(result.createdUserId!)
         setStep('register-choose')
       } else {
-        setRegMsg(`❌ Verification incomplete (status: ${vStatus}), please try again`)
+        setRegMsg(`❌ Verification incomplete (status: ${result.status}), please try again`)
       }
     } catch (err: any) {
       setRegMsg(`❌ ${err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || JSON.stringify(err)}`)
