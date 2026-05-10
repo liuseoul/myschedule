@@ -47,7 +47,7 @@ export default async function SchedulePage({
   const { data: profile } = await supabase
     .from('profiles').select('id, name').eq('id', userId).single()
 
-  const effectiveProfile = { ...(profile || {}), id: userId, role: membership.role }
+  const effectiveProfile = { name: '', ...(profile || {}), id: userId, role: membership.role }
 
   return (
     <Schedule
