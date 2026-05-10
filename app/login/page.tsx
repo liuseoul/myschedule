@@ -104,7 +104,7 @@ export default function LoginPage() {
       })
       if (result.status === 'complete') {
         await saveProfile(result.createdUserId!)
-        await setActive!({ session: result.createdSessionId })
+        setActive!({ session: result.createdSessionId }).catch(() => {})
         setRegClerkUserId(result.createdUserId!)
         setStep('register-choose')
       } else {
@@ -127,7 +127,7 @@ export default function LoginPage() {
       const result = await signUp.attemptEmailAddressVerification({ code: regCode.trim() })
       if (result.status === 'complete') {
         await saveProfile(result.createdUserId!)
-        await setActive!({ session: result.createdSessionId })
+        setActive!({ session: result.createdSessionId }).catch(() => {})
         setRegClerkUserId(result.createdUserId!)
         setStep('register-choose')
       } else {
