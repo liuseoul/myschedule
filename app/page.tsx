@@ -3,22 +3,13 @@ export const runtime = 'edge'
 
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 
 export default async function RootPage() {
   const cookieStore = await cookies()
-  let userId: string | null = cookieStore.get('qt_uid')?.value
+  const userId = cookieStore.get('qt_uid')?.value
     ? decodeURIComponent(cookieStore.get('qt_uid')!.value)
     : null
-  if (!userId) {
-    try {
-      const { userId: clerkUserId } = await auth()
-      userId = clerkUserId
-    } catch {
-      userId = null
-    }
-  }
 
   if (!userId) redirect('/login')
 

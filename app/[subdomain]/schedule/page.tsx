@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
-import { auth } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -17,16 +16,12 @@ export default async function SchedulePage({
   const { subdomain } = await params
   const { _uid } = await searchParams
 
+  const cookieStore = await cookies()
   let userId: string | null = _uid || null
   if (!userId) {
-    const cookieStore = await cookies()
     userId = cookieStore.get('qt_uid')?.value
       ? decodeURIComponent(cookieStore.get('qt_uid')!.value)
       : null
-  }
-  if (!userId) {
-    const { userId: clerkUserId } = await auth()
-    userId = clerkUserId
   }
   if (!userId) redirect('/login')
 

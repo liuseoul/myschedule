@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useClerk } from '@clerk/nextjs'
 import { useE2E } from '@/lib/useE2E'
 import { useGroupKey } from '@/lib/useGroupKey'
 import { encField, decField } from '@/lib/e2e'
@@ -85,7 +84,6 @@ function remFullDateLabel(r: Reminder, today: string) {
 export default function Schedule({ profile, groupId, groupName, subdomain }: ScheduleProps) {
   const router   = useRouter()
   const supabase = createClient()
-  const { signOut } = useClerk()
 
   const { keyPair } = useE2E(profile?.id || null)
   const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
@@ -269,10 +267,10 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     closeDetailRem(); await loadReminders()
   }
 
-  async function handleLogout() {
+  function handleLogout() {
     document.cookie = 'qt_uid=; path=/; max-age=0'
+    document.cookie = 'qt_auth=; path=/; max-age=0'
     document.cookie = 'qt_group=; path=/; max-age=0'
-    await signOut()
     router.push('/login')
     router.refresh()
   }

@@ -1,10 +1,20 @@
-// Clerk's clerkMiddleware calls auth() on every request which makes a JWKS
-// network call that hangs on Cloudflare Pages edge runtime immediately after
-// login. Use a plain passthrough instead — auth is handled by each page.
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export default function middleware(_req: NextRequest) {
+export default function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+
+  const isPublic =
+    pathname.startsWith('/login') ||
+    pathname === '/api/auth/login'
+
+  if (!isPublic) {
+    const auth = req.cookies.get('qt_auth')?.value
+    if (!auth) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+  }
+
   return NextResponse.next()
 }
 

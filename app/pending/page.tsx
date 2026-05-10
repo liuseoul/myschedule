@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { useClerk, useAuth } from '@clerk/nextjs'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 function BrandName() {
   return (
@@ -13,15 +13,20 @@ function BrandName() {
 }
 
 export default function PendingPage() {
-  const { signOut } = useClerk()
-  const { userId } = useAuth()
+  const router = useRouter()
+  const [userId, setUserId] = useState<string | null>(null)
 
-  const [showCreate,     setShowCreate]     = useState(false)
-  const [groupNameCn,    setGroupNameCn]    = useState('')
-  const [groupNameEn,    setGroupNameEn]    = useState('')
-  const [managerNameEn,  setManagerNameEn]  = useState('')
-  const [creating,       setCreating]       = useState(false)
-  const [createMsg,      setCreateMsg]      = useState('')
+  const [showCreate,    setShowCreate]    = useState(false)
+  const [groupNameCn,   setGroupNameCn]   = useState('')
+  const [groupNameEn,   setGroupNameEn]   = useState('')
+  const [managerNameEn, setManagerNameEn] = useState('')
+  const [creating,      setCreating]      = useState(false)
+  const [createMsg,     setCreateMsg]     = useState('')
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )qt_uid=([^;]*)/)
+    setUserId(match ? decodeURIComponent(match[1]) : null)
+  }, [])
 
   const previewSubdomain = (groupNameEn + managerNameEn)
     .toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
@@ -30,7 +35,7 @@ export default function PendingPage() {
     if (!groupNameCn.trim() || !groupNameEn.trim() || !managerNameEn.trim()) {
       setCreateMsg('❌ All fields are required'); return
     }
-    if (!userId) { setCreateMsg('❌ Auth service not ready — please refresh'); return }
+    if (!userId) { setCreateMsg('❌ Not signed in — please sign in again'); return }
     setCreating(true); setCreateMsg('')
     try {
       const res = await fetch('/api/auth/create-group-for-self', {
@@ -53,6 +58,13 @@ export default function PendingPage() {
     }
   }
 
+  function handleSignOut() {
+    document.cookie = 'qt_uid=; path=/; max-age=0'
+    document.cookie = 'qt_auth=; path=/; max-age=0'
+    document.cookie = 'qt_group=; path=/; max-age=0'
+    router.push('/login')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center">
@@ -71,31 +83,20 @@ export default function PendingPage() {
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 border border-amber-200 mx-auto">
               <span className="text-xl">⏳</span>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Account created — awaiting access</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Account active — no workspace yet</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Your account is ready. If you&apos;ve been invited to a workspace, ask your admin to add you by email — you&apos;ll get instant access.
+              Create a workspace to get started with your schedule.
             </p>
-            <div className="bg-gray-50 rounded-lg px-4 py-3 text-xs text-gray-400 text-left space-y-1">
-              <p>✉️ Share your email with your workspace admin</p>
-              <p>🔑 They can add you instantly using your email</p>
-              <p>✅ Sign back in with the same account once you&apos;ve been added</p>
-            </div>
-
-            <div className="flex items-center gap-3 text-gray-300">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400">or</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
 
             <button
               onClick={() => setShowCreate(true)}
               className="w-full py-2.5 text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors"
             >
-              Create my own workspace →
+              Create my workspace →
             </button>
 
             <button
-              onClick={() => signOut({ redirectUrl: '/login' })}
+              onClick={handleSignOut}
               className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
               Sign out
