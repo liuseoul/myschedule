@@ -2,3 +2,7 @@ name = "myschedule"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+NEXT_PUBLIC_SUPABASE_URL = "https://rtfjrkuejmjodabysvli.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UU0EDMJKDJFCd__kmobkfA_RsCXAUkX"
