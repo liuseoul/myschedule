@@ -509,7 +509,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             const bgClass   = isToday
               ? 'bg-teal-500 text-white ring-2 ring-teal-600'
               : hasEvents
-                ? 'bg-slate-300 text-gray-800 hover:bg-slate-400'
+                ? 'bg-yellow-300 border-2 border-black text-gray-900 hover:bg-yellow-400'
                 : 'hover:bg-gray-100 text-gray-700'
 
             return (
@@ -586,8 +586,13 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         {/* ── Two-column main ─────────────────────────────────── */}
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-0">
 
+          {/* Left on desktop, top on mobile: calendar */}
+          <div className="lg:w-[480px] xl:w-[540px] flex-shrink-0">
+            <MonthCalendar />
+          </div>
+
           {/* Right on desktop, bottom on mobile: schedule list */}
-          <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px] lg:order-2">
+          <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px]">
             <div className="flex items-center justify-between mb-3 flex-shrink-0 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
               <span className="text-sm font-semibold text-gray-700">📅 Schedule</span>
               <div className="flex items-center gap-2">
@@ -710,10 +715,6 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             </div>
           </div>
 
-          {/* Left on desktop, top on mobile: calendar */}
-          <div className="lg:w-[480px] xl:w-[540px] flex-shrink-0 lg:order-1">
-            <MonthCalendar />
-          </div>
         </main>
       </div>
 
