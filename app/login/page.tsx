@@ -1,6 +1,10 @@
 'use client'
 import { useState } from 'react'
 
+const ADMIN_ID   = 'liu'
+const ADMIN_PW   = 'ust321'
+const ADMIN_CODE = '141014'
+
 export default function LoginPage() {
   const [adminId,  setAdminId]  = useState('')
   const [password, setPassword] = useState('')
@@ -8,33 +12,25 @@ export default function LoginPage() {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
 
-  async function handleLogin() {
+  function handleLogin() {
     if (!adminId.trim() || !password || !code.trim()) {
       setError('Please fill in all fields')
       return
     }
+    if (
+      adminId.trim() !== ADMIN_ID ||
+      password !== ADMIN_PW ||
+      code.trim() !== ADMIN_CODE
+    ) {
+      setError('Invalid credentials')
+      return
+    }
     setLoading(true)
     setError('')
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId: adminId.trim(), password, code: code.trim() }),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setError(json.error || 'Login failed')
-        setLoading(false)
-        return
-      }
-      const maxAge = 86400 * 30
-      document.cookie = `qt_auth=1; path=/; max-age=${maxAge}; SameSite=Lax`
-      document.cookie = `qt_uid=${encodeURIComponent(adminId.trim())}; path=/; max-age=${maxAge}; SameSite=Lax`
-      window.location.href = json.subdomain ? `/${json.subdomain}/schedule` : '/pending'
-    } catch {
-      setError('Network error — please try again')
-      setLoading(false)
-    }
+    const maxAge = 86400 * 30
+    document.cookie = `qt_auth=1; path=/; max-age=${maxAge}; SameSite=Lax`
+    document.cookie = `qt_uid=${ADMIN_ID}; path=/; max-age=${maxAge}; SameSite=Lax`
+    window.location.href = `/${ADMIN_ID}/schedule`
   }
 
   function handleKey(e: React.KeyboardEvent) {
