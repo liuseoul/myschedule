@@ -563,10 +563,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         <header className="bg-white border-b border-gray-200 flex-shrink-0">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">Q</div>
-              <span className="font-semibold text-gray-900 text-sm">MySchedule</span>
-              <span className="text-gray-300 text-sm">·</span>
-              <span className="text-sm text-gray-500 capitalize truncate">{groupName || subdomain}</span>
+              <span className="font-bold text-sm px-3 py-1 bg-green-500 border-2 border-black rounded-full text-white">MySchedule</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {myGroups.length > 1 && (
