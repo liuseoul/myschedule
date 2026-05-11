@@ -109,7 +109,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
   const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
 
   const isAdmin  = ['first_admin', 'second_admin'].includes(profile?.role || '')
-  const todayStr = new Date().toISOString().split('T')[0]
+  const _now = new Date()
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`
 
   const [currentUserId,    setCurrentUserId]    = useState<string | null>(null)
   const [reminders,        setReminders]        = useState<Reminder[]>([])
