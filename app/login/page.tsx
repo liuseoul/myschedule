@@ -27,6 +27,9 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
+      const maxAge = 86400 * 30
+      document.cookie = `qt_auth=1; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `qt_uid=${encodeURIComponent(adminId.trim())}; path=/; max-age=${maxAge}; SameSite=Lax`
       window.location.href = json.subdomain ? `/${json.subdomain}/schedule` : '/pending'
     } catch {
       setError('Network error — please try again')
