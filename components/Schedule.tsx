@@ -348,6 +348,42 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     )
   }
 
+  function TimeSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+    const MINS = [0, 15, 30, 45]
+    const parts  = value ? value.split(':') : []
+    const curH   = parts[0] ? parseInt(parts[0]) : -1
+    const curM   = parts[1] ? parseInt(parts[1]) : -1
+    function set(h: number, m: number) {
+      onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <div className="flex items-center gap-1">
+          <select value={curH >= 0 ? curH : ''}
+            onChange={e => e.target.value === '' ? onChange('') : set(parseInt(e.target.value), curM >= 0 ? curM : 0)}
+            className="input-field flex-1 pr-1">
+            <option value="">--</option>
+            {Array.from({ length: 24 }, (_, i) => (
+              <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+            ))}
+          </select>
+          <span className="text-gray-400 font-bold">:</span>
+          <select value={curM >= 0 ? curM : ''}
+            onChange={e => e.target.value === '' ? onChange('') : set(curH >= 0 ? curH : 9, parseInt(e.target.value))}
+            className="input-field flex-1 pr-1">
+            <option value="">--</option>
+            {MINS.map(m => <option key={m} value={m}>{String(m).padStart(2, '0')}</option>)}
+          </select>
+          {value && (
+            <button type="button" onClick={() => onChange('')}
+              className="text-gray-400 hover:text-gray-600 text-sm px-1">✕</button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   function DateTimeFields({
     startDate, endDate, startTime, endTime,
     onStartDate, onEndDate, onStartTime, onEndTime,
@@ -371,14 +407,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start time</label>
-            <input type="time" value={startTime} onChange={e => onStartTime(e.target.value)} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End time</label>
-            <input type="time" value={endTime} onChange={e => onEndTime(e.target.value)} className="input-field" />
-          </div>
+          <TimeSelect value={startTime} onChange={onStartTime} label="Start time" />
+          <TimeSelect value={endTime}   onChange={onEndTime}   label="End time" />
         </div>
       </>
     )
@@ -397,9 +427,9 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     return (
       <button onClick={() => openDetailRem(r)}
         className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all duration-150 hover:border-teal-400 hover:shadow-sm ${cls}`}>
-        <div className="flex flex-col items-center flex-shrink-0 bg-blue-100 rounded-lg px-2 py-1 min-w-[56px]">
+        <div className="flex flex-col items-center flex-shrink-0 bg-yellow-300 border-2 border-black rounded-lg px-2 py-1 min-w-[56px]">
           <span className={`text-sm font-bold leading-tight whitespace-nowrap
-            ${variant === 'upcoming' && isToday ? 'text-amber-800' : variant === 'upcoming' ? 'text-teal-700' : 'text-gray-500'}`}>
+            ${variant === 'upcoming' && isToday ? 'text-amber-800' : variant === 'upcoming' ? 'text-gray-900' : 'text-gray-500'}`}>
             {dateLabel}
           </span>
           {r.start_time && (
@@ -456,16 +486,16 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         {/* Month nav */}
         <div className="flex items-center justify-between">
           <button onClick={prevMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">‹</button>
-          <span className="text-sm font-semibold text-gray-800">{MONTH_NAMES[calMonth]} {calYear}</span>
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-2xl leading-none font-bold">‹</button>
+          <span className="text-xl font-bold text-gray-800">{MONTH_NAMES[calMonth]} {calYear}</span>
           <button onClick={nextMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">›</button>
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-2xl leading-none font-bold">›</button>
         </div>
 
         {/* Day-of-week headers */}
         <div className="grid grid-cols-7 text-center">
           {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-            <div key={d} className="text-[10px] font-semibold text-gray-400 py-0.5">{d}</div>
+            <div key={d} className="text-sm font-bold text-gray-400 py-1">{d}</div>
           ))}
         </div>
 
@@ -486,12 +516,12 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               <button
                 key={i}
                 onClick={() => hasEvents ? setCalFocusDate(dayStr) : undefined}
-                className={`aspect-square flex flex-col items-center justify-center rounded-lg text-xs font-medium transition-all
+                className={`aspect-square flex flex-col items-center justify-center rounded-lg text-lg font-bold transition-all
                   ${bgClass} ${hasEvents ? 'cursor-pointer' : 'cursor-default'}`}
               >
                 <span className={isToday ? 'font-bold' : ''}>{day}</span>
                 {hasEvents && events.length > 1 && (
-                  <span className={`text-[9px] leading-none mt-0.5 ${isToday ? 'text-teal-100' : 'text-gray-500'}`}>
+                  <span className={`text-xs font-bold leading-none mt-0.5 ${isToday ? 'text-teal-100' : 'text-gray-500'}`}>
                     {events.length}
                   </span>
                 )}
@@ -556,8 +586,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         {/* ── Two-column main ─────────────────────────────────── */}
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-0">
 
-          {/* Left: schedule list */}
-          <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px]">
+          {/* Right on desktop, bottom on mobile: schedule list */}
+          <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px] lg:order-2">
             <div className="flex items-center justify-between mb-3 flex-shrink-0 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
               <span className="text-sm font-semibold text-gray-700">📅 Schedule</span>
               <div className="flex items-center gap-2">
@@ -680,8 +710,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             </div>
           </div>
 
-          {/* Right: calendar */}
-          <div className="lg:w-80 xl:w-96 flex-shrink-0">
+          {/* Left on desktop, top on mobile: calendar */}
+          <div className="lg:w-[480px] xl:w-[540px] flex-shrink-0 lg:order-1">
             <MonthCalendar />
           </div>
         </main>
@@ -873,10 +903,6 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type <span className="text-red-500">*</span></label>
-                    <TypeGrid current={editType} onSet={setEditType} />
-                  </div>
                   <DateTimeFields
                     startDate={editStartDate} endDate={editEndDate_}
                     startTime={editStartTime} endTime={editEndTime}

@@ -2,8 +2,8 @@
 import { useState } from 'react'
 
 const ADMIN_ID   = 'liu'
-const ADMIN_PW   = 'ust321'
-const ADMIN_CODE = '141014'
+const ADMIN_PW   = 'Usthk321'
+const ADMIN_CODE = '314159'
 
 export default function LoginPage() {
   const [adminId,  setAdminId]  = useState('')
@@ -27,9 +27,9 @@ export default function LoginPage() {
     }
     setLoading(true)
     setError('')
-    const maxAge = 86400 * 30
-    document.cookie = `qt_auth=1; path=/; max-age=${maxAge}; SameSite=Lax`
-    document.cookie = `qt_uid=${ADMIN_ID}; path=/; max-age=${maxAge}; SameSite=Lax`
+    const expires = new Date(Date.now() + 86400 * 1000).toUTCString()
+    document.cookie = `qt_auth=1; path=/; expires=${expires}; SameSite=Lax; Secure`
+    document.cookie = `qt_uid=${ADMIN_ID}; path=/; expires=${expires}; SameSite=Lax; Secure`
     window.location.href = `/${ADMIN_ID}/schedule`
   }
 
@@ -41,13 +41,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 mb-4 shadow-lg shadow-teal-900/50">
-            <span className="text-white text-2xl font-black">Q</span>
-          </div>
-          <h1 className="text-white text-2xl font-semibold mb-1">
+          <h1 className="text-white text-2xl font-semibold">
             My<span className="font-black bg-gradient-to-r from-teal-300 to-teal-500 bg-clip-text text-transparent">Schedule</span>
           </h1>
-          <p className="text-slate-400 text-sm">Sign in to continue</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-4">
