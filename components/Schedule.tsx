@@ -53,7 +53,7 @@ const TYPE_PRIORITY = [
   'business_travel','visiting_reception','personal_leave','others',
 ]
 
-const ROW_BG    = ['bg-white', 'bg-gray-50']
+const ROW_BG    = ['bg-sky-50', 'bg-blue-50']
 const MAX_UPCOMING = 20
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -465,8 +465,10 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
 
   // ── Month calendar ────────────────────────────────────────
   function MonthCalendar() {
-    const firstDow    = new Date(calYear, calMonth, 1).getDay()
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+    // Week starts Monday: getDay() returns 0=Sun→6, 1=Mon→0, …
+    const rawDow = new Date(calYear, calMonth, 1).getDay()
+    const firstDow = (rawDow + 6) % 7
 
     const cells: (number | null)[] = []
     for (let i = 0; i < firstDow; i++) cells.push(null)
@@ -482,7 +484,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     }
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-3">
+      <div className="bg-sky-50 rounded-xl border border-gray-200 p-4 flex flex-col gap-3">
         {/* Month nav */}
         <div className="flex items-center justify-between">
           <button onClick={prevMonth}
@@ -494,7 +496,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
 
         {/* Day-of-week headers */}
         <div className="grid grid-cols-7 text-center">
-          {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+          {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => (
             <div key={d} className="text-sm font-bold text-gray-400 py-1">{d}</div>
           ))}
         </div>
