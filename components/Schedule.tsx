@@ -573,7 +573,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                 </button>
               )}
               <span className="text-sm text-gray-600 hidden sm:block">{profile?.name || ''}</span>
-              {isAdmin && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium">Admin</span>}
+
               <button onClick={handleLogout}
                 className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
                 Sign out
