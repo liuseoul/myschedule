@@ -32,18 +32,26 @@ const TYPE_COLORS: Record<string, string> = {
   others:                 'bg-gray-100 text-gray-600',
 }
 
-const TYPE_DOT: Record<string, string> = {
-  court_hearing:          'bg-red-500',
-  filing_deadline:        'bg-rose-500',
-  consultation:           'bg-teal-500',
-  statute_of_limitations: 'bg-pink-500',
-  online_meeting:         'bg-blue-500',
-  visiting:               'bg-purple-500',
-  business_travel:        'bg-orange-500',
-  personal_leave:         'bg-yellow-400',
-  visiting_reception:     'bg-green-500',
-  others:                 'bg-gray-400',
+// Background colors for calendar day cells
+const TYPE_BG: Record<string, string> = {
+  court_hearing:          'bg-red-200',
+  filing_deadline:        'bg-rose-200',
+  consultation:           'bg-teal-200',
+  statute_of_limitations: 'bg-pink-200',
+  online_meeting:         'bg-blue-200',
+  visiting:               'bg-purple-200',
+  business_travel:        'bg-orange-200',
+  personal_leave:         'bg-yellow-200',
+  visiting_reception:     'bg-green-200',
+  others:                 'bg-gray-200',
 }
+
+// Priority order for picking dominant color when multiple event types on same day
+const TYPE_PRIORITY = [
+  'court_hearing','filing_deadline','statute_of_limitations',
+  'online_meeting','consultation','visiting',
+  'business_travel','visiting_reception','personal_leave','others',
+]
 
 const ROW_BG    = ['bg-white', 'bg-gray-50']
 const MAX_UPCOMING = 20
@@ -115,18 +123,17 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
 
   // ── Calendar state ────────────────────────────────────────
   const now = new Date()
-  const [calYear,  setCalYear]  = useState(now.getFullYear())
-  const [calMonth, setCalMonth] = useState(now.getMonth())
+  const [calYear,      setCalYear]      = useState(now.getFullYear())
+  const [calMonth,     setCalMonth]     = useState(now.getMonth())
+  const [calFocusDate, setCalFocusDate] = useState<string | null>(null)
 
   // ── Add reminder form ─────────────────────────────────────
   const [showAddRem,   setShowAddRem]   = useState(false)
-  const [remType,      setRemType]      = useState('others')
   const [remStartDate, setRemStartDate] = useState(todayStr)
   const [remEndDate_,  setRemEndDate_]  = useState(todayStr)
   const [remStartTime, setRemStartTime] = useState('')
   const [remEndTime,   setRemEndTime]   = useState('')
   const [remContent,   setRemContent]   = useState('')
-  const [remAssigned,  setRemAssigned]  = useState('')
   const [remPreAlerts, setRemPreAlerts] = useState<number[]>([])
   const [remSaving,    setRemSaving]    = useState(false)
 
@@ -201,15 +208,16 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
 
   // ── Save new reminder ────────────────────────────────────
   async function saveReminder() {
-    if (!remStartDate || !remEndDate_ || !remContent.trim()) { alert('Please fill in all required fields'); return }
+    if (!remStartDate || !remEndDate_ || !remContent.trim()) { alert('Please fill in date and notes'); return }
     if (remEndDate_ < remStartDate) { alert('End date cannot be before start date'); return }
     if (remEndTime && remStartTime && remEndTime <= remStartTime) { alert('End time must be after start time'); return }
     setRemSaving(true)
     const { error } = await supabase.from('reminders').insert({
       due_date: remStartDate, start_date: remStartDate, end_date: remEndDate_,
-      content: encField(remContent.trim(), groupKey) ?? remContent.trim(), type: remType,
+      content: encField(remContent.trim(), groupKey) ?? remContent.trim(),
+      type: 'others',
       start_time: remStartTime || null, end_time: remEndTime || null,
-      assigned_to_name: remAssigned || null, pre_alert_days: remPreAlerts,
+      assigned_to_name: null, pre_alert_days: remPreAlerts,
       group_id: groupId, created_by: profile!.id,
     })
     if (error) { alert('Save failed: ' + error.message) }
@@ -219,8 +227,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
 
   function resetAddForm() {
     setRemContent(''); setRemStartDate(todayStr); setRemEndDate_(todayStr)
-    setRemType('others'); setRemStartTime(''); setRemEndTime('')
-    setRemAssigned(''); setRemPreAlerts([])
+    setRemStartTime(''); setRemEndTime(''); setRemPreAlerts([])
   }
 
   function openDetailRem(r: Reminder) { setSelectedRem(r); setDetailMode('view') }
@@ -382,7 +389,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     const dateLabel = remDateLabel(r)
     const rowBg     = variant === 'upcoming' ? (isToday ? '' : ROW_BG[index % 2]) : ''
     const cls =
-      variant === 'upcoming' && isToday ? 'bg-amber-50 border-gray-300'
+      variant === 'upcoming' && isToday ? 'bg-amber-200 border-amber-400'
       : variant === 'upcoming'          ? `${rowBg} border-gray-200`
       : variant === 'past'              ? 'bg-gray-50 border-gray-200 opacity-60 hover:opacity-80'
       : 'bg-red-50/40 border-gray-200 opacity-50 hover:opacity-70'
@@ -391,11 +398,11 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         className={`w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg border transition-all duration-150 hover:border-teal-400 hover:shadow-sm ${cls}`}>
         <div className="flex flex-col items-start flex-shrink-0 min-w-12 mt-0.5">
           <span className={`text-xs font-bold leading-tight
-            ${variant === 'upcoming' && isToday ? 'text-amber-600' : variant === 'upcoming' ? 'text-teal-600' : 'text-gray-400'}`}>
+            ${variant === 'upcoming' && isToday ? 'text-amber-800' : variant === 'upcoming' ? 'text-teal-600' : 'text-gray-400'}`}>
             {dateLabel}
           </span>
           {variant === 'upcoming' && r.start_time && (
-            <span className="text-[10px] text-gray-400 leading-tight mt-0.5">
+            <span className="text-[10px] text-gray-500 leading-tight mt-0.5">
               {fmtTime(r.start_time)}{r.end_time ? `–${fmtTime(r.end_time)}` : ''}
             </span>
           )}
@@ -404,7 +411,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
           <span className={`text-sm leading-snug
             ${variant === 'deleted' ? 'line-through text-gray-400'
             : variant === 'past'    ? 'line-through text-gray-500'
-            : isToday               ? 'text-amber-800 font-medium'
+            : isToday               ? 'text-amber-900 font-bold'
             : 'text-gray-800'}`}>
             {r.content}
           </span>
@@ -425,7 +432,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     )
   }
 
-  // ── Calendar component ────────────────────────────────────
+  // ── Month calendar ────────────────────────────────────────
   function MonthCalendar() {
     const firstDow    = new Date(calYear, calMonth, 1).getDay()
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
@@ -434,15 +441,13 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     for (let i = 0; i < firstDow; i++) cells.push(null)
     for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
-    // Used type colors present in this month for legend
-    const typesThisMonth = new Set<string>()
-
-    const dayData: { dayStr: string; events: Reminder[] }[] = []
+    const dayData: { dayStr: string; events: Reminder[]; topType: string | null }[] = []
     for (let d = 1; d <= daysInMonth; d++) {
       const dayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
       const events = eventsOnDay(dayStr)
-      events.forEach(r => typesThisMonth.add(r.type || 'others'))
-      dayData.push({ dayStr, events })
+      const types  = events.map(r => r.type || 'others')
+      const topType = TYPE_PRIORITY.find(t => types.includes(t)) ?? null
+      dayData.push({ dayStr, events, topType })
     }
 
     return (
@@ -450,16 +455,10 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         {/* Month nav */}
         <div className="flex items-center justify-between">
           <button onClick={prevMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">
-            ‹
-          </button>
-          <span className="text-sm font-semibold text-gray-800">
-            {MONTH_NAMES[calMonth]} {calYear}
-          </span>
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">‹</button>
+          <span className="text-sm font-semibold text-gray-800">{MONTH_NAMES[calMonth]} {calYear}</span>
           <button onClick={nextMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">
-            ›
-          </button>
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">›</button>
         </div>
 
         {/* Day-of-week headers */}
@@ -470,64 +469,68 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         </div>
 
         {/* Day grid */}
-        <div className="grid grid-cols-7 gap-y-1">
+        <div className="grid grid-cols-7 gap-1">
           {cells.map((day, i) => {
             if (!day) return <div key={i} />
-            const { dayStr, events } = dayData[day - 1]
+            const { dayStr, events, topType } = dayData[day - 1]
             const isToday   = dayStr === todayStr
             const hasEvents = events.length > 0
-
-            // Deduplicate types for color lines (keep order of first occurrence)
-            const seenTypes: string[] = []
-            events.forEach(r => {
-              const t = r.type || 'others'
-              if (!seenTypes.includes(t)) seenTypes.push(t)
-            })
+            const bgClass   = isToday
+              ? 'bg-teal-500 text-white ring-2 ring-teal-600'
+              : hasEvents && topType
+                ? `${TYPE_BG[topType]} text-gray-800 hover:opacity-80`
+                : 'hover:bg-gray-100 text-gray-700'
 
             return (
-              <div key={i}
-                className={`flex flex-col items-center py-1 rounded-lg cursor-default
-                  ${isToday ? 'bg-teal-50 ring-1 ring-teal-400' : hasEvents ? 'hover:bg-gray-50' : ''}`}>
-                <span className={`text-xs font-medium leading-none mb-1
-                  ${isToday ? 'text-teal-700 font-bold' : 'text-gray-700'}`}>
-                  {day}
-                </span>
-                <div className="flex flex-col gap-px w-5">
-                  {seenTypes.slice(0, 5).map((t, ti) => (
-                    <div key={ti} className={`h-[3px] w-full rounded-full ${TYPE_DOT[t] || 'bg-gray-400'}`} />
-                  ))}
-                </div>
-              </div>
+              <button
+                key={i}
+                onClick={() => hasEvents ? setCalFocusDate(dayStr) : undefined}
+                className={`aspect-square flex flex-col items-center justify-center rounded-lg text-xs font-medium transition-all
+                  ${bgClass} ${hasEvents ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <span className={isToday ? 'font-bold' : ''}>{day}</span>
+                {hasEvents && events.length > 1 && (
+                  <span className={`text-[9px] leading-none mt-0.5 ${isToday ? 'text-teal-100' : 'text-gray-500'}`}>
+                    {events.length}
+                  </span>
+                )}
+              </button>
             )
           })}
         </div>
 
-        {/* Legend */}
-        {typesThisMonth.size > 0 && (
-          <div className="border-t border-gray-100 pt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-            {Array.from(typesThisMonth).map(t => (
-              <div key={t} className="flex items-center gap-1.5">
-                <div className={`w-3 h-[3px] rounded-full flex-shrink-0 ${TYPE_DOT[t] || 'bg-gray-400'}`} />
-                <span className="text-[10px] text-gray-500">{TYPE_LABELS[t] || t}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Color legend */}
+        {(() => {
+          const typesThisMonth = new Set<string>()
+          dayData.forEach(({ events }) => events.forEach(r => typesThisMonth.add(r.type || 'others')))
+          if (typesThisMonth.size === 0) return null
+          return (
+            <div className="border-t border-gray-100 pt-3 flex flex-wrap gap-x-3 gap-y-1.5">
+              {Array.from(typesThisMonth).map(t => (
+                <div key={t} className="flex items-center gap-1.5">
+                  <div className={`w-3 h-3 rounded-sm flex-shrink-0 ${TYPE_BG[t] || 'bg-gray-200'}`} />
+                  <span className="text-[10px] text-gray-500">{TYPE_LABELS[t] || t}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
     )
   }
+
+  // Events for the focused calendar date
+  const focusDateEvents = calFocusDate ? eventsOnDay(calFocusDate) : []
 
   return (
     <>
       <div className="min-h-screen flex flex-col bg-gray-50">
 
-        {/* ── Top header bar ─────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────── */}
         <header className="bg-white border-b border-gray-200 flex-shrink-0">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                Q
-              </div>
+              <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">Q</div>
               <span className="font-semibold text-gray-900 text-sm">MySchedule</span>
               <span className="text-gray-300 text-sm">·</span>
               <span className="text-sm text-gray-500 capitalize truncate">{groupName || subdomain}</span>
@@ -540,9 +543,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                 </button>
               )}
               <span className="text-sm text-gray-600 hidden sm:block">{profile?.name || ''}</span>
-              {isAdmin && (
-                <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium">Admin</span>
-              )}
+              {isAdmin && <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full font-medium">Admin</span>}
               <button onClick={handleLogout}
                 className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
                 Sign out
@@ -554,10 +555,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         {/* ── Two-column main ─────────────────────────────────── */}
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-0">
 
-          {/* ── Left: text schedule ──────────────────────────── */}
+          {/* Left: schedule list */}
           <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px]">
-
-            {/* Schedule header */}
             <div className="flex items-center justify-between mb-3 flex-shrink-0 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
               <span className="text-sm font-semibold text-gray-700">📅 Schedule</span>
               <div className="flex items-center gap-2">
@@ -572,9 +571,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               </div>
             </div>
 
-            {/* Scrollable reminder list */}
             <div className="flex-1 overflow-y-auto space-y-1.5 pb-4">
-
               {/* Pre-alerts */}
               {(() => {
                 const preAlerts = upcoming.filter(r => {
@@ -611,14 +608,11 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                 const cutoff = new Date(todayStr)
                 cutoff.setDate(cutoff.getDate() + 14)
                 const cutoffStr = cutoff.toISOString().slice(0, 10)
-                const courtDates = upcoming.filter(r =>
-                  courtTypes.includes(r.type) && remPrimaryDate(r) <= cutoffStr
-                )
+                const courtDates = upcoming.filter(r => courtTypes.includes(r.type) && remPrimaryDate(r) <= cutoffStr)
                 if (courtDates.length === 0) return null
                 return (
                   <div className="mb-3">
-                    <button onClick={() => setShowCourtDates(v => !v)}
-                      className="flex items-center gap-1 pb-1 w-full">
+                    <button onClick={() => setShowCourtDates(v => !v)} className="flex items-center gap-1 pb-1 w-full">
                       <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">⚖️ Court Dates</span>
                       <span className="text-[10px] text-rose-400 ml-1">({courtDates.length})</span>
                       <span className="text-[10px] text-gray-400 ml-auto">{showCourtDates ? '▲' : '▼'}</span>
@@ -637,12 +631,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                                 {primDate.slice(5, 7)}/{primDate.slice(8, 10)}
                               </span>
                               <div className="min-w-0 flex-1">
-                                <span className={`text-xs truncate block ${isUrgent ? 'text-rose-800 font-medium' : 'text-red-700'}`}>
-                                  {r.content}
-                                </span>
-                                <span className={`text-[10px] ${TYPE_COLORS[r.type] || ''} px-1 rounded`}>
-                                  {TYPE_LABELS[r.type]}
-                                </span>
+                                <span className={`text-xs truncate block ${isUrgent ? 'text-rose-800 font-medium' : 'text-red-700'}`}>{r.content}</span>
+                                <span className={`text-[10px] ${TYPE_COLORS[r.type] || ''} px-1 rounded`}>{TYPE_LABELS[r.type]}</span>
                               </div>
                               <span className={`text-[10px] font-semibold flex-shrink-0 ${isUrgent ? 'text-rose-700' : 'text-red-400'}`}>
                                 {d === 0 ? 'Today' : `${d}d`}
@@ -657,7 +647,6 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                 )
               })()}
 
-              {/* Upcoming */}
               {visibleUpcoming.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="upcoming" />)}
               {hasMoreUpcoming && (
                 <button onClick={() => setShowAllUpcoming(true)}
@@ -697,8 +686,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               {displayReminders.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-gray-400 text-sm mb-2">No events yet</p>
-                  <button onClick={() => setShowAddRem(true)}
-                    className="text-teal-600 hover:text-teal-800 text-sm font-medium">
+                  <button onClick={() => setShowAddRem(true)} className="text-teal-600 hover:text-teal-800 text-sm font-medium">
                     + Add your first event
                   </button>
                 </div>
@@ -706,13 +694,52 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             </div>
           </div>
 
-          {/* ── Right: calendar ──────────────────────────────── */}
+          {/* Right: calendar */}
           <div className="lg:w-80 xl:w-96 flex-shrink-0">
             <MonthCalendar />
           </div>
-
         </main>
       </div>
+
+      {/* ══ Calendar date popup ══════════════════════════════════ */}
+      {calFocusDate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setCalFocusDate(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[70vh] flex flex-col"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-base font-semibold text-gray-900">
+                {calFocusDate.slice(0,4)}/{calFocusDate.slice(5,7)}/{calFocusDate.slice(8,10)}
+                {calFocusDate === todayStr && <span className="ml-2 text-xs text-amber-600 font-medium">Today</span>}
+              </h3>
+              <button onClick={() => setCalFocusDate(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+              {focusDateEvents.map(r => (
+                <button key={r.id} onClick={() => { setCalFocusDate(null); openDetailRem(r) }}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all">
+                  <div className="flex items-start gap-2">
+                    {r.type && r.type !== 'others' && (
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${TYPE_COLORS[r.type] || TYPE_COLORS.others}`}>
+                        {TYPE_LABELS[r.type] || r.type}
+                      </span>
+                    )}
+                    <span className="text-sm text-gray-800 leading-snug">{r.content}</span>
+                  </div>
+                  {r.start_time && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {fmtTime(r.start_time)}{r.end_time ? ` – ${fmtTime(r.end_time)}` : ''}
+                    </div>
+                  )}
+                </button>
+              ))}
+              {focusDateEvents.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">No events on this date</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Switch Group Modal ══════════════════════════════════ */}
       {showGroupPicker && (
@@ -726,9 +753,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               {myGroups.map(g => (
                 <button key={g.id} onClick={() => switchGroup(g.id)}
                   className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all
-                    ${g.id === groupId
-                      ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
-                      : 'border-gray-200 hover:border-teal-400 text-gray-800 hover:bg-teal-50'}`}>
+                    ${g.id === groupId ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold' : 'border-gray-200 hover:border-teal-400 text-gray-800 hover:bg-teal-50'}`}>
                   {g.name}
                   {g.id === groupId && <span className="ml-2 text-xs font-normal text-teal-500">Current</span>}
                 </button>
@@ -747,20 +772,12 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               <button onClick={() => { setShowAddRem(false); resetAddForm() }} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type <span className="text-red-500">*</span></label>
-                <TypeGrid current={remType} onSet={setRemType} />
-              </div>
               <DateTimeFields
                 startDate={remStartDate} endDate={remEndDate_}
                 startTime={remStartTime} endTime={remEndTime}
                 onStartDate={setRemStartDate} onEndDate={setRemEndDate_}
                 onStartTime={setRemStartTime} onEndTime={setRemEndTime}
               />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
-                <MemberSelector current={remAssigned} onSet={setRemAssigned} />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Pre-alert reminders</label>
                 <div className="flex gap-3">
