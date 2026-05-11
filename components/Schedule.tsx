@@ -796,22 +796,6 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                 onStartTime={setRemStartTime} onEndTime={setRemEndTime}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Pre-alert reminders</label>
-                <div className="flex gap-3">
-                  {[30, 7, 1].map(d => (
-                    <label key={d} className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="checkbox"
-                        checked={remPreAlerts.includes(d)}
-                        onChange={e => setRemPreAlerts(prev =>
-                          e.target.checked ? [...prev, d] : prev.filter(x => x !== d)
-                        )}
-                        className="rounded border-gray-300 text-teal-600" />
-                      <span className="text-xs text-gray-600">{d === 1 ? '1 day' : `${d} days`}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-red-500">*</span></label>
                 <textarea value={remContent} onChange={e => setRemContent(e.target.value)}
                   placeholder="Event details…" rows={3} className="input-field resize-none" autoFocus />
@@ -910,26 +894,6 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                     onStartDate={setEditStartDate} onEndDate={setEditEndDate_}
                     onStartTime={setEditStartTime} onEndTime={setEditEndTime}
                   />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
-                    <MemberSelector current={editAssigned} onSet={setEditAssigned} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pre-alert reminders</label>
-                    <div className="flex gap-3">
-                      {[30, 7, 1].map(d => (
-                        <label key={d} className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox"
-                            checked={editPreAlerts.includes(d)}
-                            onChange={e => setEditPreAlerts(prev =>
-                              e.target.checked ? [...prev, d] : prev.filter(x => x !== d)
-                            )}
-                            className="rounded border-gray-300 text-teal-600" />
-                          <span className="text-xs text-gray-600">{d === 1 ? '1 day' : `${d} days`}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-red-500">*</span></label>
                     <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
