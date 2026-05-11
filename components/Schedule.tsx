@@ -32,11 +32,24 @@ const TYPE_COLORS: Record<string, string> = {
   others:                 'bg-gray-100 text-gray-600',
 }
 
+const TYPE_DOT: Record<string, string> = {
+  court_hearing:          'bg-red-500',
+  filing_deadline:        'bg-rose-500',
+  consultation:           'bg-teal-500',
+  statute_of_limitations: 'bg-pink-500',
+  online_meeting:         'bg-blue-500',
+  visiting:               'bg-purple-500',
+  business_travel:        'bg-orange-500',
+  personal_leave:         'bg-yellow-400',
+  visiting_reception:     'bg-green-500',
+  others:                 'bg-gray-400',
+}
+
 const ROW_BG    = ['bg-white', 'bg-gray-50']
 const MAX_UPCOMING = 20
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-type Member = { id: string; name: string }
-
+type Member   = { id: string; name: string }
 type Reminder = {
   id: string
   due_date: string
@@ -55,7 +68,6 @@ type Reminder = {
   assigned_to_name: string | null
   pre_alert_days: number[]
 }
-
 type GroupInfo = { id: string; name: string }
 
 interface ScheduleProps {
@@ -100,6 +112,11 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
   const [showAllUpcoming,  setShowAllUpcoming]  = useState(false)
   const [showAllRem,       setShowAllRem]       = useState(false)
   const [showCourtDates,   setShowCourtDates]   = useState(true)
+
+  // ── Calendar state ────────────────────────────────────────
+  const now = new Date()
+  const [calYear,  setCalYear]  = useState(now.getFullYear())
+  const [calMonth, setCalMonth] = useState(now.getMonth())
 
   // ── Add reminder form ─────────────────────────────────────
   const [showAddRem,   setShowAddRem]   = useState(false)
@@ -163,11 +180,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     document.cookie = `qt_group=${gid}; path=/; max-age=86400; SameSite=Lax`
     setShowGroupPicker(false)
     const { data: grp } = await supabase.from('groups').select('subdomain').eq('id', gid).single()
-    if (grp?.subdomain) {
-      router.push(`/${grp.subdomain}/schedule`)
-    } else {
-      router.push('/')
-    }
+    if (grp?.subdomain) router.push(`/${grp.subdomain}/schedule`)
+    else router.push('/')
     router.refresh()
   }
 
@@ -195,8 +209,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       due_date: remStartDate, start_date: remStartDate, end_date: remEndDate_,
       content: encField(remContent.trim(), groupKey) ?? remContent.trim(), type: remType,
       start_time: remStartTime || null, end_time: remEndTime || null,
-      assigned_to_name: remAssigned || null,
-      pre_alert_days: remPreAlerts,
+      assigned_to_name: remAssigned || null, pre_alert_days: remPreAlerts,
       group_id: groupId, created_by: profile!.id,
     })
     if (error) { alert('Save failed: ' + error.message) }
@@ -273,6 +286,24 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     document.cookie = 'qt_group=; path=/; max-age=0'
     router.push('/login')
     router.refresh()
+  }
+
+  // ── Calendar helpers ──────────────────────────────────────
+  function eventsOnDay(dayStr: string): Reminder[] {
+    return displayReminders.filter(r =>
+      !r.deleted &&
+      remPrimaryDate(r) <= dayStr &&
+      remEndDate(r) >= dayStr
+    )
+  }
+
+  function prevMonth() {
+    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
+    else setCalMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
+    else setCalMonth(m => m + 1)
   }
 
   // ── Inner helpers ─────────────────────────────────────────
@@ -394,13 +425,105 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
     )
   }
 
+  // ── Calendar component ────────────────────────────────────
+  function MonthCalendar() {
+    const firstDow    = new Date(calYear, calMonth, 1).getDay()
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+
+    const cells: (number | null)[] = []
+    for (let i = 0; i < firstDow; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+    // Used type colors present in this month for legend
+    const typesThisMonth = new Set<string>()
+
+    const dayData: { dayStr: string; events: Reminder[] }[] = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const events = eventsOnDay(dayStr)
+      events.forEach(r => typesThisMonth.add(r.type || 'others'))
+      dayData.push({ dayStr, events })
+    }
+
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-3">
+        {/* Month nav */}
+        <div className="flex items-center justify-between">
+          <button onClick={prevMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">
+            ‹
+          </button>
+          <span className="text-sm font-semibold text-gray-800">
+            {MONTH_NAMES[calMonth]} {calYear}
+          </span>
+          <button onClick={nextMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors text-lg leading-none">
+            ›
+          </button>
+        </div>
+
+        {/* Day-of-week headers */}
+        <div className="grid grid-cols-7 text-center">
+          {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+            <div key={d} className="text-[10px] font-semibold text-gray-400 py-0.5">{d}</div>
+          ))}
+        </div>
+
+        {/* Day grid */}
+        <div className="grid grid-cols-7 gap-y-1">
+          {cells.map((day, i) => {
+            if (!day) return <div key={i} />
+            const { dayStr, events } = dayData[day - 1]
+            const isToday   = dayStr === todayStr
+            const hasEvents = events.length > 0
+
+            // Deduplicate types for color lines (keep order of first occurrence)
+            const seenTypes: string[] = []
+            events.forEach(r => {
+              const t = r.type || 'others'
+              if (!seenTypes.includes(t)) seenTypes.push(t)
+            })
+
+            return (
+              <div key={i}
+                className={`flex flex-col items-center py-1 rounded-lg cursor-default
+                  ${isToday ? 'bg-teal-50 ring-1 ring-teal-400' : hasEvents ? 'hover:bg-gray-50' : ''}`}>
+                <span className={`text-xs font-medium leading-none mb-1
+                  ${isToday ? 'text-teal-700 font-bold' : 'text-gray-700'}`}>
+                  {day}
+                </span>
+                <div className="flex flex-col gap-px w-5">
+                  {seenTypes.slice(0, 5).map((t, ti) => (
+                    <div key={ti} className={`h-[3px] w-full rounded-full ${TYPE_DOT[t] || 'bg-gray-400'}`} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        {typesThisMonth.size > 0 && (
+          <div className="border-t border-gray-100 pt-3 flex flex-wrap gap-x-3 gap-y-1.5">
+            {Array.from(typesThisMonth).map(t => (
+              <div key={t} className="flex items-center gap-1.5">
+                <div className={`w-3 h-[3px] rounded-full flex-shrink-0 ${TYPE_DOT[t] || 'bg-gray-400'}`} />
+                <span className="text-[10px] text-gray-500">{TYPE_LABELS[t] || t}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="min-h-screen flex flex-col bg-gray-50">
 
         {/* ── Top header bar ─────────────────────────────────── */}
         <header className="bg-white border-b border-gray-200 flex-shrink-0">
-          <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                 Q
@@ -428,157 +551,166 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
           </div>
         </header>
 
-        {/* ── Main content ───────────────────────────────────── */}
-        <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-4 flex flex-col min-h-0">
+        {/* ── Two-column main ─────────────────────────────────── */}
+        <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-0">
 
-          {/* Schedule header */}
-          <div className="flex items-center justify-between mb-3 flex-shrink-0 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
-            <span className="text-sm font-semibold text-gray-700">📅 Schedule</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowAllRem(true)}
-                className="text-xs text-gray-500 hover:text-teal-600 px-2.5 py-1 rounded-lg border border-gray-300 hover:border-teal-400 transition-colors">
-                All events
-              </button>
-              <button onClick={() => setShowAddRem(true)}
-                className="text-xs bg-teal-600 hover:bg-teal-700 text-white font-medium px-3 py-1 rounded-lg transition-colors">
-                + Add event
-              </button>
+          {/* ── Left: text schedule ──────────────────────────── */}
+          <div className="flex-1 flex flex-col min-h-0 lg:max-w-[520px]">
+
+            {/* Schedule header */}
+            <div className="flex items-center justify-between mb-3 flex-shrink-0 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
+              <span className="text-sm font-semibold text-gray-700">📅 Schedule</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowAllRem(true)}
+                  className="text-xs text-gray-500 hover:text-teal-600 px-2.5 py-1 rounded-lg border border-gray-300 hover:border-teal-400 transition-colors">
+                  All events
+                </button>
+                <button onClick={() => setShowAddRem(true)}
+                  className="text-xs bg-teal-600 hover:bg-teal-700 text-white font-medium px-3 py-1 rounded-lg transition-colors">
+                  + Add event
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Scrollable reminder list */}
-          <div className="flex-1 overflow-y-auto space-y-1.5 pb-4">
+            {/* Scrollable reminder list */}
+            <div className="flex-1 overflow-y-auto space-y-1.5 pb-4">
 
-            {/* Pre-alerts firing today */}
-            {(() => {
-              const preAlerts = upcoming.filter(r => {
-                if (!r.pre_alert_days || r.pre_alert_days.length === 0) return false
-                const d = Math.ceil((new Date(remPrimaryDate(r)).getTime() - new Date(todayStr).getTime()) / 86400000)
-                return r.pre_alert_days.includes(d)
-              })
-              if (preAlerts.length === 0) return null
-              return (
-                <div className="mb-3">
-                  <div className="flex items-center gap-1 pb-1">
-                    <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">⚡ Pre-alerts</span>
-                  </div>
-                  <div className="space-y-1">
-                    {preAlerts.map(r => {
-                      const d = Math.ceil((new Date(remPrimaryDate(r)).getTime() - new Date(todayStr).getTime()) / 86400000)
-                      return (
-                        <button key={r.id} onClick={() => openDetailRem(r)}
-                          className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors">
-                          <span className="text-[10px] font-bold text-orange-700 min-w-10">⚡ {d}d</span>
-                          <span className="text-xs text-orange-800 truncate">{r.content}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="h-px bg-gray-200 mt-3" />
-                </div>
-              )
-            })()}
-
-            {/* Court dates (next 14 days) */}
-            {(() => {
-              const courtTypes = ['court_hearing', 'filing_deadline']
-              const cutoff = new Date(todayStr)
-              cutoff.setDate(cutoff.getDate() + 14)
-              const cutoffStr = cutoff.toISOString().slice(0, 10)
-              const courtDates = upcoming.filter(r =>
-                courtTypes.includes(r.type) && remPrimaryDate(r) <= cutoffStr
-              )
-              if (courtDates.length === 0) return null
-              return (
-                <div className="mb-3">
-                  <button
-                    onClick={() => setShowCourtDates(v => !v)}
-                    className="flex items-center gap-1 pb-1 w-full">
-                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">⚖️ Court Dates</span>
-                    <span className="text-[10px] text-rose-400 ml-1">({courtDates.length})</span>
-                    <span className="text-[10px] text-gray-400 ml-auto">{showCourtDates ? '▲' : '▼'}</span>
-                  </button>
-                  {showCourtDates && (
+              {/* Pre-alerts */}
+              {(() => {
+                const preAlerts = upcoming.filter(r => {
+                  if (!r.pre_alert_days || r.pre_alert_days.length === 0) return false
+                  const d = Math.ceil((new Date(remPrimaryDate(r)).getTime() - new Date(todayStr).getTime()) / 86400000)
+                  return r.pre_alert_days.includes(d)
+                })
+                if (preAlerts.length === 0) return null
+                return (
+                  <div className="mb-3">
+                    <div className="flex items-center gap-1 pb-1">
+                      <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">⚡ Pre-alerts</span>
+                    </div>
                     <div className="space-y-1">
-                      {courtDates.map(r => {
-                        const primDate = remPrimaryDate(r)
-                        const d = Math.ceil((new Date(primDate).getTime() - new Date(todayStr).getTime()) / 86400000)
-                        const isUrgent = d <= 3
+                      {preAlerts.map(r => {
+                        const d = Math.ceil((new Date(remPrimaryDate(r)).getTime() - new Date(todayStr).getTime()) / 86400000)
                         return (
                           <button key={r.id} onClick={() => openDetailRem(r)}
-                            className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
-                              ${isUrgent ? 'border-rose-300 bg-rose-50 hover:bg-rose-100' : 'border-red-100 bg-red-50/50 hover:bg-red-50'}`}>
-                            <span className={`text-[10px] font-bold min-w-8 ${isUrgent ? 'text-rose-700' : 'text-red-500'}`}>
-                              {primDate.slice(5, 7)}/{primDate.slice(8, 10)}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <span className={`text-xs truncate block ${isUrgent ? 'text-rose-800 font-medium' : 'text-red-700'}`}>
-                                {r.content}
-                              </span>
-                              <span className={`text-[10px] ${TYPE_COLORS[r.type] || ''} px-1 rounded`}>
-                                {TYPE_LABELS[r.type]}
-                              </span>
-                            </div>
-                            <span className={`text-[10px] font-semibold flex-shrink-0 ${isUrgent ? 'text-rose-700' : 'text-red-400'}`}>
-                              {d === 0 ? 'Today' : `${d}d`}
-                            </span>
+                            className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors">
+                            <span className="text-[10px] font-bold text-orange-700 min-w-10">⚡ {d}d</span>
+                            <span className="text-xs text-orange-800 truncate">{r.content}</span>
                           </button>
                         )
                       })}
                     </div>
-                  )}
-                  <div className="h-px bg-gray-200 mt-3" />
-                </div>
-              )
-            })()}
+                    <div className="h-px bg-gray-200 mt-3" />
+                  </div>
+                )
+              })()}
 
-            {/* Upcoming reminders */}
-            {visibleUpcoming.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="upcoming" />)}
-            {hasMoreUpcoming && (
-              <button onClick={() => setShowAllUpcoming(true)}
-                className="w-full py-2 text-xs text-gray-500 hover:text-teal-600 border border-dashed border-gray-300 hover:border-teal-400 rounded-lg transition-colors">
-                Show more ({upcoming.length - MAX_UPCOMING} more)
-              </button>
-            )}
-            {showAllUpcoming && upcoming.length > MAX_UPCOMING && (
-              <button onClick={() => setShowAllUpcoming(false)}
-                className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg transition-colors">
-                Collapse
-              </button>
-            )}
+              {/* Court dates */}
+              {(() => {
+                const courtTypes = ['court_hearing', 'filing_deadline']
+                const cutoff = new Date(todayStr)
+                cutoff.setDate(cutoff.getDate() + 14)
+                const cutoffStr = cutoff.toISOString().slice(0, 10)
+                const courtDates = upcoming.filter(r =>
+                  courtTypes.includes(r.type) && remPrimaryDate(r) <= cutoffStr
+                )
+                if (courtDates.length === 0) return null
+                return (
+                  <div className="mb-3">
+                    <button onClick={() => setShowCourtDates(v => !v)}
+                      className="flex items-center gap-1 pb-1 w-full">
+                      <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">⚖️ Court Dates</span>
+                      <span className="text-[10px] text-rose-400 ml-1">({courtDates.length})</span>
+                      <span className="text-[10px] text-gray-400 ml-auto">{showCourtDates ? '▲' : '▼'}</span>
+                    </button>
+                    {showCourtDates && (
+                      <div className="space-y-1">
+                        {courtDates.map(r => {
+                          const primDate = remPrimaryDate(r)
+                          const d = Math.ceil((new Date(primDate).getTime() - new Date(todayStr).getTime()) / 86400000)
+                          const isUrgent = d <= 3
+                          return (
+                            <button key={r.id} onClick={() => openDetailRem(r)}
+                              className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
+                                ${isUrgent ? 'border-rose-300 bg-rose-50 hover:bg-rose-100' : 'border-red-100 bg-red-50/50 hover:bg-red-50'}`}>
+                              <span className={`text-[10px] font-bold min-w-8 ${isUrgent ? 'text-rose-700' : 'text-red-500'}`}>
+                                {primDate.slice(5, 7)}/{primDate.slice(8, 10)}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <span className={`text-xs truncate block ${isUrgent ? 'text-rose-800 font-medium' : 'text-red-700'}`}>
+                                  {r.content}
+                                </span>
+                                <span className={`text-[10px] ${TYPE_COLORS[r.type] || ''} px-1 rounded`}>
+                                  {TYPE_LABELS[r.type]}
+                                </span>
+                              </div>
+                              <span className={`text-[10px] font-semibold flex-shrink-0 ${isUrgent ? 'text-rose-700' : 'text-red-400'}`}>
+                                {d === 0 ? 'Today' : `${d}d`}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    <div className="h-px bg-gray-200 mt-3" />
+                  </div>
+                )
+              })()}
 
-            {past.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 pt-3 pb-1">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">Past {past.length}</span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-                {past.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="past" />)}
-              </>
-            )}
-
-            {deletedRems.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 pt-3 pb-1">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">Deleted {deletedRems.length}</span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-                {deletedRems.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="deleted" />)}
-              </>
-            )}
-
-            {displayReminders.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-400 text-sm mb-2">No events yet</p>
-                <button onClick={() => setShowAddRem(true)}
-                  className="text-teal-600 hover:text-teal-800 text-sm font-medium">
-                  + Add your first event
+              {/* Upcoming */}
+              {visibleUpcoming.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="upcoming" />)}
+              {hasMoreUpcoming && (
+                <button onClick={() => setShowAllUpcoming(true)}
+                  className="w-full py-2 text-xs text-gray-500 hover:text-teal-600 border border-dashed border-gray-300 hover:border-teal-400 rounded-lg transition-colors">
+                  Show more ({upcoming.length - MAX_UPCOMING} more)
                 </button>
-              </div>
-            )}
+              )}
+              {showAllUpcoming && upcoming.length > MAX_UPCOMING && (
+                <button onClick={() => setShowAllUpcoming(false)}
+                  className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-lg transition-colors">
+                  Collapse
+                </button>
+              )}
+
+              {past.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 pt-3 pb-1">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">Past {past.length}</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                  {past.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="past" />)}
+                </>
+              )}
+
+              {deletedRems.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 pt-3 pb-1">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">Deleted {deletedRems.length}</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                  {deletedRems.map((r, i) => <ReminderRow key={r.id} r={r} index={i} variant="deleted" />)}
+                </>
+              )}
+
+              {displayReminders.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-400 text-sm mb-2">No events yet</p>
+                  <button onClick={() => setShowAddRem(true)}
+                    className="text-teal-600 hover:text-teal-800 text-sm font-medium">
+                    + Add your first event
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* ── Right: calendar ──────────────────────────────── */}
+          <div className="lg:w-80 xl:w-96 flex-shrink-0">
+            <MonthCalendar />
+          </div>
+
         </main>
       </div>
 
