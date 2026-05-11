@@ -478,8 +478,8 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             const hasEvents = events.length > 0
             const bgClass   = isToday
               ? 'bg-teal-500 text-white ring-2 ring-teal-600'
-              : hasEvents && topType
-                ? `${TYPE_BG[topType]} text-gray-800 hover:opacity-80`
+              : hasEvents
+                ? 'bg-slate-300 text-gray-800 hover:bg-slate-400'
                 : 'hover:bg-gray-100 text-gray-700'
 
             return (
