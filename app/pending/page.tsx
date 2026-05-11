@@ -129,7 +129,7 @@ export default function PendingPage() {
 
               {previewSubdomain && (
                 <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-2.5 text-xs text-gray-600">
-                  Workspace URL: <span className="font-mono font-semibold text-teal-700">qujingtuan.com/{previewSubdomain}</span>
+                  Workspace URL: <span className="font-mono font-semibold text-teal-700">nanoschedule.com/{previewSubdomain}</span>
                 </div>
               )}
             </div>
