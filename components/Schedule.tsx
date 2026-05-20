@@ -57,83 +57,95 @@ const ROW_BG    = ['bg-sky-50', 'bg-blue-50']
 const MAX_UPCOMING = 20
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-// ── Public holidays: China (CN) and Korea (KR) ───────────────
-// Dates are official public holidays; multi-day periods listed individually.
-const HOLIDAYS: Record<string, { label: string; countries: string[] }> = {
-  // ── 2025 ──
-  '2025-01-01': { label: "New Year's Day",              countries: ['CN','KR'] },
-  '2025-01-28': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-01-29': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
-  '2025-01-30': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
-  '2025-01-31': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-02-01': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-02-02': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-02-03': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-02-04': { label: 'Spring Festival',             countries: ['CN'] },
-  '2025-03-01': { label: 'Independence Movement Day',   countries: ['KR'] },
-  '2025-04-04': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2025-04-05': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2025-04-06': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2025-05-01': { label: 'Labour Day',                  countries: ['CN'] },
-  '2025-05-02': { label: 'Labour Day',                  countries: ['CN'] },
-  '2025-05-03': { label: 'Labour Day',                  countries: ['CN'] },
-  '2025-05-04': { label: 'Labour Day',                  countries: ['CN'] },
-  '2025-05-05': { label: "Labour Day / Children's Day", countries: ['CN','KR'] },
-  '2025-05-06': { label: "Buddha's Birthday (sub)",     countries: ['KR'] },
-  '2025-05-31': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2025-06-01': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2025-06-02': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2025-06-06': { label: 'Memorial Day',                countries: ['KR'] },
-  '2025-08-15': { label: 'Liberation Day',              countries: ['KR'] },
-  '2025-10-01': { label: 'National Day',                countries: ['CN'] },
-  '2025-10-02': { label: 'National Day',                countries: ['CN'] },
-  '2025-10-03': { label: 'National Day / Foundation',   countries: ['CN','KR'] },
-  '2025-10-04': { label: 'National Day',                countries: ['CN'] },
-  '2025-10-05': { label: 'National Day / Chuseok Eve',  countries: ['CN','KR'] },
-  '2025-10-06': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
-  '2025-10-07': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
-  '2025-10-08': { label: 'National Day',                countries: ['CN'] },
-  '2025-10-09': { label: 'Hangul Day',                  countries: ['KR'] },
-  '2025-12-25': { label: 'Christmas',                   countries: ['KR'] },
-  // ── 2026 ──
-  '2026-01-01': { label: "New Year's Day",              countries: ['CN','KR'] },
-  '2026-01-02': { label: "New Year Holiday",            countries: ['CN'] },
-  '2026-02-15': { label: 'Spring Festival Eve',         countries: ['CN'] },
-  '2026-02-16': { label: 'Seollal Eve',                 countries: ['KR'] },
-  '2026-02-17': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
-  '2026-02-18': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
-  '2026-02-19': { label: 'Spring Festival',             countries: ['CN'] },
-  '2026-02-20': { label: 'Spring Festival',             countries: ['CN'] },
-  '2026-02-21': { label: 'Spring Festival',             countries: ['CN'] },
-  '2026-02-22': { label: 'Spring Festival',             countries: ['CN'] },
-  '2026-02-23': { label: 'Spring Festival',             countries: ['CN'] },
-  '2026-03-01': { label: 'Independence Movement Day',   countries: ['KR'] },
-  '2026-04-05': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2026-04-06': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2026-04-07': { label: 'Qingming Festival',           countries: ['CN'] },
-  '2026-05-01': { label: 'Labour Day',                  countries: ['CN'] },
-  '2026-05-02': { label: 'Labour Day',                  countries: ['CN'] },
-  '2026-05-03': { label: 'Labour Day',                  countries: ['CN'] },
-  '2026-05-04': { label: 'Labour Day',                  countries: ['CN'] },
-  '2026-05-05': { label: "Labour Day / Children's Day", countries: ['CN','KR'] },
-  '2026-05-24': { label: "Buddha's Birthday",           countries: ['KR'] },
-  '2026-06-06': { label: 'Memorial Day',                countries: ['KR'] },
-  '2026-06-19': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2026-06-20': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2026-06-21': { label: 'Dragon Boat Festival',        countries: ['CN'] },
-  '2026-08-15': { label: 'Liberation Day',              countries: ['KR'] },
-  '2026-09-24': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
-  '2026-09-25': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
-  '2026-09-26': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
-  '2026-10-01': { label: 'National Day',                countries: ['CN'] },
-  '2026-10-02': { label: 'National Day',                countries: ['CN'] },
-  '2026-10-03': { label: 'National Day / Foundation',   countries: ['CN','KR'] },
-  '2026-10-04': { label: 'National Day / Chuseok Eve',  countries: ['CN','KR'] },
-  '2026-10-05': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
-  '2026-10-06': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
-  '2026-10-07': { label: 'National Day',                countries: ['CN'] },
-  '2026-10-09': { label: 'Hangul Day',                  countries: ['KR'] },
-  '2026-12-25': { label: 'Christmas',                   countries: ['KR'] },
+// ── Official public holidays: China & South Korea ─────────────
+// type 'off'  = public holiday / non-working day
+// type 'work' = CN compensatory work day (调休上班 — weekend becomes a work day)
+const HOLIDAYS: Record<string, { label: string; type: 'off' | 'work' }> = {
+  // ══ 2025 ══════════════════════════════════════════════════════
+  '2025-01-01': { label: "New Year's Day",                      type: 'off'  },
+  '2025-01-26': { label: 'Comp. work day (Spring Festival)',    type: 'work' },
+  '2025-01-28': { label: 'Spring Festival · Seollal Eve',       type: 'off'  },
+  '2025-01-29': { label: 'Spring Festival · Seollal',           type: 'off'  },
+  '2025-01-30': { label: 'Spring Festival · Seollal',           type: 'off'  },
+  '2025-01-31': { label: 'Spring Festival',                     type: 'off'  },
+  '2025-02-01': { label: 'Spring Festival',                     type: 'off'  },
+  '2025-02-02': { label: 'Spring Festival',                     type: 'off'  },
+  '2025-02-03': { label: 'Spring Festival',                     type: 'off'  },
+  '2025-02-04': { label: 'Spring Festival',                     type: 'off'  },
+  '2025-02-08': { label: 'Comp. work day (Spring Festival)',    type: 'work' },
+  '2025-03-01': { label: 'Independence Movement Day',           type: 'off'  },
+  '2025-03-03': { label: 'Independence Movement Day (sub.)',     type: 'off'  },
+  '2025-04-04': { label: 'Qingming Festival',                   type: 'off'  },
+  '2025-04-05': { label: 'Qingming Festival',                   type: 'off'  },
+  '2025-04-06': { label: 'Qingming Festival',                   type: 'off'  },
+  '2025-04-27': { label: 'Comp. work day (Labour Day)',         type: 'work' },
+  '2025-05-01': { label: 'Labour Day',                          type: 'off'  },
+  '2025-05-02': { label: 'Labour Day',                          type: 'off'  },
+  '2025-05-03': { label: 'Labour Day',                          type: 'off'  },
+  '2025-05-04': { label: 'Labour Day',                          type: 'off'  },
+  '2025-05-05': { label: "Labour Day · Children's Day",         type: 'off'  },
+  '2025-05-06': { label: "Buddha's Birthday (sub.)",            type: 'off'  },
+  '2025-05-10': { label: 'Comp. work day (Labour Day)',         type: 'work' },
+  '2025-05-31': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2025-06-01': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2025-06-02': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2025-06-06': { label: 'Memorial Day',                        type: 'off'  },
+  '2025-08-15': { label: 'Liberation Day',                      type: 'off'  },
+  '2025-09-28': { label: 'Comp. work day (National Day)',       type: 'work' },
+  '2025-10-01': { label: 'National Day',                        type: 'off'  },
+  '2025-10-02': { label: 'National Day',                        type: 'off'  },
+  '2025-10-03': { label: 'National Day · National Foundation Day', type: 'off' },
+  '2025-10-04': { label: 'National Day',                        type: 'off'  },
+  '2025-10-05': { label: 'National Day · Chuseok Eve',          type: 'off'  },
+  '2025-10-06': { label: 'National Day · Mid-Autumn · Chuseok', type: 'off'  },
+  '2025-10-07': { label: 'National Day · Chuseok',              type: 'off'  },
+  '2025-10-08': { label: 'National Day · Chuseok (sub.)',        type: 'off'  },
+  '2025-10-09': { label: 'Hangul Day',                          type: 'off'  },
+  '2025-10-11': { label: 'Comp. work day (National Day)',       type: 'work' },
+  '2025-12-25': { label: 'Christmas',                           type: 'off'  },
+  // ══ 2026 ══════════════════════════════════════════════════════
+  '2026-01-01': { label: "New Year's Day",                      type: 'off'  },
+  '2026-02-15': { label: 'Spring Festival Eve',                 type: 'off'  },
+  '2026-02-16': { label: 'Spring Festival · Seollal Eve',       type: 'off'  },
+  '2026-02-17': { label: 'Spring Festival · Seollal',           type: 'off'  },
+  '2026-02-18': { label: 'Spring Festival · Seollal',           type: 'off'  },
+  '2026-02-19': { label: 'Spring Festival',                     type: 'off'  },
+  '2026-02-20': { label: 'Spring Festival',                     type: 'off'  },
+  '2026-02-21': { label: 'Spring Festival',                     type: 'off'  },
+  '2026-02-22': { label: 'Spring Festival',                     type: 'off'  },
+  '2026-02-23': { label: 'Spring Festival',                     type: 'off'  },
+  '2026-03-01': { label: 'Independence Movement Day',           type: 'off'  },
+  '2026-03-02': { label: 'Independence Movement Day (sub.)',     type: 'off'  },
+  '2026-04-05': { label: 'Qingming Festival',                   type: 'off'  },
+  '2026-04-06': { label: 'Qingming Festival',                   type: 'off'  },
+  '2026-04-07': { label: 'Qingming Festival',                   type: 'off'  },
+  '2026-05-01': { label: 'Labour Day',                          type: 'off'  },
+  '2026-05-02': { label: 'Labour Day',                          type: 'off'  },
+  '2026-05-03': { label: 'Labour Day',                          type: 'off'  },
+  '2026-05-04': { label: 'Labour Day',                          type: 'off'  },
+  '2026-05-05': { label: "Labour Day · Children's Day",         type: 'off'  },
+  '2026-05-24': { label: "Buddha's Birthday",                   type: 'off'  },
+  '2026-05-25': { label: "Buddha's Birthday (sub.)",            type: 'off'  },
+  '2026-06-06': { label: 'Memorial Day',                        type: 'off'  },
+  '2026-06-19': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2026-06-20': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2026-06-21': { label: 'Dragon Boat Festival',                type: 'off'  },
+  '2026-08-15': { label: 'Liberation Day',                      type: 'off'  },
+  '2026-08-17': { label: 'Liberation Day (sub.)',                type: 'off'  },
+  '2026-09-23': { label: 'Chuseok Eve',                         type: 'off'  },
+  '2026-09-24': { label: 'Mid-Autumn · Chuseok Eve',            type: 'off'  },
+  '2026-09-25': { label: 'Mid-Autumn · Chuseok',               type: 'off'  },
+  '2026-09-26': { label: 'Mid-Autumn · Chuseok',               type: 'off'  },
+  '2026-09-28': { label: 'Chuseok (sub.)',                      type: 'off'  },
+  '2026-10-01': { label: 'National Day',                        type: 'off'  },
+  '2026-10-02': { label: 'National Day',                        type: 'off'  },
+  '2026-10-03': { label: 'National Day · National Foundation Day', type: 'off' },
+  '2026-10-04': { label: 'National Day',                        type: 'off'  },
+  '2026-10-05': { label: 'National Day · Foundation Day (sub.)', type: 'off' },
+  '2026-10-06': { label: 'National Day',                        type: 'off'  },
+  '2026-10-07': { label: 'National Day',                        type: 'off'  },
+  '2026-10-09': { label: 'Hangul Day',                          type: 'off'  },
+  '2026-12-25': { label: 'Christmas',                           type: 'off'  },
 }
 
 type Member   = { id: string; name: string }
@@ -597,44 +609,45 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
             const isToday      = dayStr === todayStr
             const isPast       = dayStr < todayStr
             const hasEvents    = events.length > 0
-            const showMark     = hasEvents && !isPast   // clear mark for past dates
+            const showMark     = hasEvents && !isPast
             const holiday      = HOLIDAYS[dayStr]
+            const isOffDay     = holiday?.type === 'off'
+            const isWorkDay    = holiday?.type === 'work'
+            const isClickable  = hasEvents || !!holiday
 
             const bgClass = isToday
               ? 'bg-teal-500 text-white ring-2 ring-teal-600'
               : showMark
                 ? 'bg-yellow-300 border-2 border-black text-gray-900 hover:bg-yellow-400'
-                : 'hover:bg-gray-100 text-gray-700'
+                : isClickable
+                  ? 'hover:bg-blue-50 text-gray-700'
+                  : 'hover:bg-gray-100 text-gray-700'
 
             return (
               <button
                 key={i}
-                onClick={() => hasEvents ? setCalFocusDate(dayStr) : undefined}
+                onClick={() => isClickable ? setCalFocusDate(dayStr) : undefined}
                 className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-lg font-bold transition-all
-                  ${bgClass} ${hasEvents ? 'cursor-pointer' : 'cursor-default'}`}
+                  ${bgClass} ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
               >
-                {/* Handwriting-style holiday circle */}
-                {holiday && !isToday && (
+                {/* Handwriting-style circle for holiday/rest days — bright blue */}
+                {isOffDay && !isToday && (
                   <svg viewBox="0 0 40 40" fill="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    aria-label={holiday.label}>
+                    className="absolute inset-0 w-full h-full pointer-events-none">
                     <path
-                      d="M20 5 C27 4,36 9,36 19 C36 30,28 37,19 37 C10 37,3 30,4 20 C5 10,12 4,20 5"
-                      stroke="#dc2626" strokeWidth="2.3" strokeLinecap="round" fill="none"
+                      d="M20 5 C28 4,37 10,36 20 C35 30,27 37,18 37 C9 37,2 29,4 20 C6 10,13 4,20 5"
+                      stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" fill="none"
                     />
                   </svg>
+                )}
+                {/* Compensatory work day — small orange W badge */}
+                {isWorkDay && (
+                  <span className="absolute top-0.5 right-1 text-[9px] font-bold text-orange-500 leading-none">W</span>
                 )}
                 <span>{day}</span>
                 {showMark && events.length > 1 && (
                   <span className={`text-xs font-bold leading-none mt-0.5 ${isToday ? 'text-teal-100' : 'text-gray-500'}`}>
                     {events.length}
-                  </span>
-                )}
-                {/* Country flags for holiday */}
-                {holiday && (
-                  <span className="text-[8px] leading-none absolute bottom-0.5">
-                    {holiday.countries.includes('CN') && '🇨🇳'}
-                    {holiday.countries.includes('KR') && '🇰🇷'}
                   </span>
                 )}
               </button>
@@ -831,9 +844,9 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {calFocusDate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setCalFocusDate(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[70vh] flex flex-col"
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-sm max-h-[70vh] flex flex-col"
             onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-yellow-200 flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-900">
                 {calFocusDate.slice(0,4)}/{calFocusDate.slice(5,7)}/{calFocusDate.slice(8,10)}
                 {calFocusDate === todayStr && <span className="ml-2 text-xs text-amber-600 font-medium">Today</span>}
@@ -841,9 +854,20 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               <button onClick={() => setCalFocusDate(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+              {/* Holiday info */}
+              {HOLIDAYS[calFocusDate] && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  HOLIDAYS[calFocusDate].type === 'off'
+                    ? 'bg-blue-50 border border-blue-200 text-blue-700'
+                    : 'bg-orange-50 border border-orange-200 text-orange-700'
+                }`}>
+                  <span>{HOLIDAYS[calFocusDate].type === 'off' ? '🔵' : '🟠'}</span>
+                  <span>{HOLIDAYS[calFocusDate].label}</span>
+                </div>
+              )}
               {focusDateEvents.map(r => (
                 <button key={r.id} onClick={() => { setCalFocusDate(null); openDetailRem(r) }}
-                  className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all">
+                  className="w-full text-left px-4 py-3 rounded-xl border border-yellow-200 hover:border-teal-400 hover:bg-teal-50 transition-all">
                   <div className="flex items-start gap-2">
                     {r.type && r.type !== 'others' && (
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${TYPE_COLORS[r.type] || TYPE_COLORS.others}`}>
@@ -859,7 +883,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
                   )}
                 </button>
               ))}
-              {focusDateEvents.length === 0 && (
+              {focusDateEvents.length === 0 && !HOLIDAYS[calFocusDate] && (
                 <p className="text-sm text-gray-400 text-center py-6">No events on this date</p>
               )}
             </div>
@@ -870,7 +894,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {/* ══ Switch Group Modal ══════════════════════════════════ */}
       {showGroupPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-gray-900">Switch workspace</h3>
               <button onClick={() => setShowGroupPicker(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
@@ -892,7 +916,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {/* ══ Add Reminder Modal ══════════════════════════════════ */}
       {showAddRem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-900">Add event</h3>
               <button onClick={() => { setShowAddRem(false); resetAddForm() }} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
@@ -925,7 +949,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {/* ══ Reminder Detail / Edit Modal ════════════════════════ */}
       {selectedRem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-900">
                 {detailMode === 'edit' ? 'Edit event' : 'Event details'}
@@ -1026,7 +1050,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {/* ══ Past & Deleted Modal ════════════════════════════════ */}
       {showPastModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-900">
                 Past &amp; deleted
@@ -1055,7 +1079,7 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
       {/* ══ All Events Modal ════════════════════════════════════ */}
       {showAllRem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div className="bg-yellow-50 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-900">All events <span className="text-gray-400 font-normal text-sm">({upcoming.length})</span></h3>
               <button onClick={() => setShowAllRem(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
