@@ -57,6 +57,85 @@ const ROW_BG    = ['bg-sky-50', 'bg-blue-50']
 const MAX_UPCOMING = 20
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+// ── Public holidays: China (CN) and Korea (KR) ───────────────
+// Dates are official public holidays; multi-day periods listed individually.
+const HOLIDAYS: Record<string, { label: string; countries: string[] }> = {
+  // ── 2025 ──
+  '2025-01-01': { label: "New Year's Day",              countries: ['CN','KR'] },
+  '2025-01-28': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-01-29': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
+  '2025-01-30': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
+  '2025-01-31': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-02-01': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-02-02': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-02-03': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-02-04': { label: 'Spring Festival',             countries: ['CN'] },
+  '2025-03-01': { label: 'Independence Movement Day',   countries: ['KR'] },
+  '2025-04-04': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2025-04-05': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2025-04-06': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2025-05-01': { label: 'Labour Day',                  countries: ['CN'] },
+  '2025-05-02': { label: 'Labour Day',                  countries: ['CN'] },
+  '2025-05-03': { label: 'Labour Day',                  countries: ['CN'] },
+  '2025-05-04': { label: 'Labour Day',                  countries: ['CN'] },
+  '2025-05-05': { label: "Labour Day / Children's Day", countries: ['CN','KR'] },
+  '2025-05-06': { label: "Buddha's Birthday (sub)",     countries: ['KR'] },
+  '2025-05-31': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2025-06-01': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2025-06-02': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2025-06-06': { label: 'Memorial Day',                countries: ['KR'] },
+  '2025-08-15': { label: 'Liberation Day',              countries: ['KR'] },
+  '2025-10-01': { label: 'National Day',                countries: ['CN'] },
+  '2025-10-02': { label: 'National Day',                countries: ['CN'] },
+  '2025-10-03': { label: 'National Day / Foundation',   countries: ['CN','KR'] },
+  '2025-10-04': { label: 'National Day',                countries: ['CN'] },
+  '2025-10-05': { label: 'National Day / Chuseok Eve',  countries: ['CN','KR'] },
+  '2025-10-06': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
+  '2025-10-07': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
+  '2025-10-08': { label: 'National Day',                countries: ['CN'] },
+  '2025-10-09': { label: 'Hangul Day',                  countries: ['KR'] },
+  '2025-12-25': { label: 'Christmas',                   countries: ['KR'] },
+  // ── 2026 ──
+  '2026-01-01': { label: "New Year's Day",              countries: ['CN','KR'] },
+  '2026-01-02': { label: "New Year Holiday",            countries: ['CN'] },
+  '2026-02-15': { label: 'Spring Festival Eve',         countries: ['CN'] },
+  '2026-02-16': { label: 'Seollal Eve',                 countries: ['KR'] },
+  '2026-02-17': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
+  '2026-02-18': { label: 'Spring Festival / Seollal',   countries: ['CN','KR'] },
+  '2026-02-19': { label: 'Spring Festival',             countries: ['CN'] },
+  '2026-02-20': { label: 'Spring Festival',             countries: ['CN'] },
+  '2026-02-21': { label: 'Spring Festival',             countries: ['CN'] },
+  '2026-02-22': { label: 'Spring Festival',             countries: ['CN'] },
+  '2026-02-23': { label: 'Spring Festival',             countries: ['CN'] },
+  '2026-03-01': { label: 'Independence Movement Day',   countries: ['KR'] },
+  '2026-04-05': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2026-04-06': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2026-04-07': { label: 'Qingming Festival',           countries: ['CN'] },
+  '2026-05-01': { label: 'Labour Day',                  countries: ['CN'] },
+  '2026-05-02': { label: 'Labour Day',                  countries: ['CN'] },
+  '2026-05-03': { label: 'Labour Day',                  countries: ['CN'] },
+  '2026-05-04': { label: 'Labour Day',                  countries: ['CN'] },
+  '2026-05-05': { label: "Labour Day / Children's Day", countries: ['CN','KR'] },
+  '2026-05-24': { label: "Buddha's Birthday",           countries: ['KR'] },
+  '2026-06-06': { label: 'Memorial Day',                countries: ['KR'] },
+  '2026-06-19': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2026-06-20': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2026-06-21': { label: 'Dragon Boat Festival',        countries: ['CN'] },
+  '2026-08-15': { label: 'Liberation Day',              countries: ['KR'] },
+  '2026-09-24': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
+  '2026-09-25': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
+  '2026-09-26': { label: 'Mid-Autumn Festival',         countries: ['CN'] },
+  '2026-10-01': { label: 'National Day',                countries: ['CN'] },
+  '2026-10-02': { label: 'National Day',                countries: ['CN'] },
+  '2026-10-03': { label: 'National Day / Foundation',   countries: ['CN','KR'] },
+  '2026-10-04': { label: 'National Day / Chuseok Eve',  countries: ['CN','KR'] },
+  '2026-10-05': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
+  '2026-10-06': { label: 'National Day / Chuseok',      countries: ['CN','KR'] },
+  '2026-10-07': { label: 'National Day',                countries: ['CN'] },
+  '2026-10-09': { label: 'Hangul Day',                  countries: ['KR'] },
+  '2026-12-25': { label: 'Christmas',                   countries: ['KR'] },
+}
+
 type Member   = { id: string; name: string }
 type Reminder = {
   id: string
@@ -109,8 +188,16 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
   const groupKey = useGroupKey(profile?.id || null, groupId, keyPair)
 
   const isAdmin  = ['first_admin', 'second_admin'].includes(profile?.role || '')
-  const _now = new Date()
-  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`
+
+  function getLocalDateStr() {
+    const n = new Date()
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`
+  }
+  const [todayStr, setTodayStr] = useState(getLocalDateStr)
+  useEffect(() => {
+    const id = setInterval(() => setTodayStr(getLocalDateStr()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const [currentUserId,    setCurrentUserId]    = useState<string | null>(null)
   const [reminders,        setReminders]        = useState<Reminder[]>([])
@@ -506,12 +593,16 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
         <div className="grid grid-cols-7 gap-1">
           {cells.map((day, i) => {
             if (!day) return <div key={i} />
-            const { dayStr, events, topType } = dayData[day - 1]
-            const isToday   = dayStr === todayStr
-            const hasEvents = events.length > 0
-            const bgClass   = isToday
+            const { dayStr, events } = dayData[day - 1]
+            const isToday      = dayStr === todayStr
+            const isPast       = dayStr < todayStr
+            const hasEvents    = events.length > 0
+            const showMark     = hasEvents && !isPast   // clear mark for past dates
+            const holiday      = HOLIDAYS[dayStr]
+
+            const bgClass = isToday
               ? 'bg-teal-500 text-white ring-2 ring-teal-600'
-              : hasEvents
+              : showMark
                 ? 'bg-yellow-300 border-2 border-black text-gray-900 hover:bg-yellow-400'
                 : 'hover:bg-gray-100 text-gray-700'
 
@@ -519,13 +610,31 @@ export default function Schedule({ profile, groupId, groupName, subdomain }: Sch
               <button
                 key={i}
                 onClick={() => hasEvents ? setCalFocusDate(dayStr) : undefined}
-                className={`aspect-square flex flex-col items-center justify-center rounded-lg text-lg font-bold transition-all
+                className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-lg font-bold transition-all
                   ${bgClass} ${hasEvents ? 'cursor-pointer' : 'cursor-default'}`}
               >
-                <span className={isToday ? 'font-bold' : ''}>{day}</span>
-                {hasEvents && events.length > 1 && (
+                {/* Handwriting-style holiday circle */}
+                {holiday && !isToday && (
+                  <svg viewBox="0 0 40 40" fill="none"
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    aria-label={holiday.label}>
+                    <path
+                      d="M20 5 C27 4,36 9,36 19 C36 30,28 37,19 37 C10 37,3 30,4 20 C5 10,12 4,20 5"
+                      stroke="#dc2626" strokeWidth="2.3" strokeLinecap="round" fill="none"
+                    />
+                  </svg>
+                )}
+                <span>{day}</span>
+                {showMark && events.length > 1 && (
                   <span className={`text-xs font-bold leading-none mt-0.5 ${isToday ? 'text-teal-100' : 'text-gray-500'}`}>
                     {events.length}
+                  </span>
+                )}
+                {/* Country flags for holiday */}
+                {holiday && (
+                  <span className="text-[8px] leading-none absolute bottom-0.5">
+                    {holiday.countries.includes('CN') && '🇨🇳'}
+                    {holiday.countries.includes('KR') && '🇰🇷'}
                   </span>
                 )}
               </button>
